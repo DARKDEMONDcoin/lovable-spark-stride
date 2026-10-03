@@ -24,6 +24,32 @@ async function assertOwner(
   return supabaseAdmin;
 }
 
+async function assertWorkspaceAccess(
+  supabase: {
+    from: (table: "workspaces" | "workspace_members") => any;
+  },
+  workspaceId: string,
+  userId: string,
+) {
+  const { data: owned } = await supabase
+    .from("workspaces")
+    .select("id")
+    .eq("id", workspaceId)
+    .eq("owner_id", userId)
+    .maybeSingle();
+  if (!owned) {
+    const { data: membership } = await supabase
+      .from("workspace_members")
+      .select("user_id")
+      .eq("workspace_id", workspaceId)
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (!membership) throw new Error("ليس لديك وصول لهذه المساحة.");
+  }
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  return supabaseAdmin;
+}
+
 /** قائمة الإجراءات المتاحة لموظف معيّن. */
 export const listEmployeeActions = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -69,7 +95,7 @@ export const runEmployeeAction = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    const admin = await assertOwner(context.supabase, data.workspaceId);
+    const admin = await assertWorkspaceAccess(context.supabase, data.workspaceId, context.userId);
     const { runEmployeeActionServer } = await import("./employee-actions.server");
     const res = await runEmployeeActionServer(admin, {
       workspaceId: data.workspaceId,
@@ -146,7 +172,7 @@ export const compareSitesTask = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    await assertOwner(context.supabase, data.workspaceId);
+    await assertWorkspaceAccess(context.supabase, data.workspaceId, context.userId);
     const { compareSites } = await import("./browser-agent.server");
     const { getMember } = await import("@/data/team");
     const employee = data.employeeId ? getMember(data.employeeId) : null;

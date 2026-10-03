@@ -46,14 +46,18 @@ export function useProfile() {
   });
 }
 
+/** المساحة النشطة المملوكة (الشخصية أو مشروع يملكه المستخدم) — كل الموقع يعمل داخلها. */
 export function useWorkspace() {
   return useQuery({
     queryKey: ["workspace"],
     queryFn: async () => {
-      const rows = await must<Workspace[]>(
-        supabase.from("workspaces").select("*").order("created_at", { ascending: true }),
-      );
-      return rows[0] ?? null;
+      const { data: auth } = await supabase.auth.getUser();
+      let q = supabase.from("workspaces").select("*").order("created_at", { ascending: true });
+      if (auth.user) q = q.eq("owner_id", auth.user.id);
+      const rows = await must<Workspace[]>(q);
+      let selected: string | null = null;
+      try { selected = window.localStorage.getItem(CHAT_SPACE_KEY); } catch { /* ignore */ }
+      return rows.find((r) => r.id === selected) ?? rows[0] ?? null;
     },
   });
 }

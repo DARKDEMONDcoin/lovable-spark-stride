@@ -75,6 +75,7 @@ import { ActionCard, type PendingAction } from "@/components/app/ActionCard";
 import { UserAvatar } from "@/components/app/UserAvatar";
 import { PersonAvatar } from "@/components/app/PersonAvatar";
 import { BusinessProfileCard } from "@/components/app/BusinessProfileCard";
+import { SkillPalette } from "@/components/app/SkillPalette";
 import { Portrait } from "@/components/site/Portrait";
 import { streamEmployeeTurn, type BrowserEvent } from "@/lib/employee-stream";
 import { supabase } from "@/integrations/supabase/client";
@@ -86,7 +87,7 @@ import {
   type Aspect,
 } from "@/components/app/MediaStudio";
 
-import { featuredSkillsFor, type Skill } from "@/data/skills";
+import { featuredSkillsFor, skillsFor, type Skill } from "@/data/skills";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Message, MessageContent } from "@/components/ai-elements/message";
@@ -844,6 +845,7 @@ function ChatView({
       data: { workspaceId: workspace.id, employeeId: id, messageId, kind, originalText },
     }).catch(() => undefined);
   };
+  const employeeSkills = skillsFor(id);
   const quickSkills = featuredSkillsFor(id).slice(0, 6);
   const employeeCopy: { prompts: string[]; greetings: string[] } =
     EMPLOYEE_COPY[id] ?? EMPLOYEE_COPY["sonny"]!;
@@ -1836,6 +1838,15 @@ function ChatView({
                 />
               </div>
             ) : null}
+            <div className="pointer-events-auto mx-auto mb-2 flex w-full max-w-none">
+              <SkillPalette
+                skills={employeeSkills}
+                quick={quickSkills}
+                disabled={!workspace || busy}
+                pending={skillRun.isPending}
+                onRun={(skill, values) => skillRun.mutate({ skill, values })}
+              />
+            </div>
             <PromptInput
               onSubmit={(message) =>
                 submit(

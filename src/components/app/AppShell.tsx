@@ -309,6 +309,7 @@ const primaryLinks = [
   { to: "/app/approvals", label: "الموافقات", icon: CheckCircle2 },
   { to: "/app/brain", label: "عقل العلامة", icon: BrainCircuit },
   { to: "/app/integrations", label: "التكاملات", icon: Blocks },
+  { to: "/app/browser", label: "المتصفح المنفّذ", icon: Globe },
 ] as const;
 const secondaryLinks = [
   { to: "/app/referral", label: "شارك واربح", icon: Gift },

@@ -6,11 +6,13 @@ import { ExternalLink, Globe, Loader2, Plus, ShieldCheck, X } from "lucide-react
 
 import { AppShell } from "@/components/app/AppShell";
 import { Markdown } from "@/components/app/Markdown";
-import { useWorkspace } from "@/lib/data";
+import { useChatWorkspace } from "@/lib/data";
 import { compareSitesTask, runBrowserTask } from "@/lib/employee-actions.functions";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/app/browser")({
+  validateSearch: (search: Record<string, unknown>): { employee?: string } =>
+    typeof search["employee"] === "string" ? { employee: search["employee"].slice(0, 20) } : {},
   head: () => ({
     meta: [
       { title: "المتصفح المنفّذ | سهل" },
@@ -45,7 +47,8 @@ const ACTION_LABEL: Record<string, string> = {
 const PURCHASE_INTENT = /اشتر|شراء|احجز|حجز|اطلب|ادفع|buy|book|order|checkout/i;
 
 function BrowserPage() {
-  const { data: workspace } = useWorkspace();
+  const { data: workspace } = useChatWorkspace();
+  const { employee } = Route.useSearch();
   const runTask = useServerFn(runBrowserTask);
   const runCompare = useServerFn(compareSitesTask);
   const [mode, setMode] = useState<Mode>("task");
@@ -79,7 +82,7 @@ function BrowserPage() {
   return (
     <AppShell
       title="المتصفح المنفّذ"
-      lead="قارن الخيارات من مواقعها الأصلية، وراجع الأسعار والتفاصيل قبل أن تتخذ قرارك."
+      lead={employee ? "يستخدم الموظف المتصفح في حدود اختصاصه، ويعرض لك كل خطوة قبل أي إجراء حساس." : "قارن الخيارات من مواقعها الأصلية، وراجع الأسعار والتفاصيل قبل أن تتخذ قرارك."}
     >
       <div className="grid gap-5 lg:grid-cols-[minmax(0,26rem)_1fr]">
         <section className="space-y-4 rounded-3xl border border-border bg-card p-5">

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ListenButton } from "@/components/app/ListenButton";
 import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import {
@@ -33,7 +33,6 @@ import {
   Globe,
   Palette,
   MailWarning,
-  MoreHorizontal,
   Settings2,
   MessageCircle,
   Search,
@@ -75,10 +74,12 @@ import { PublishToWordPress } from "@/components/app/PublishToWordPress";
 import { ActionPanel } from "@/components/app/ActionPanel";
 import { ActionCard, type PendingAction } from "@/components/app/ActionCard";
 import { UserAvatar } from "@/components/app/UserAvatar";
+import { PersonAvatar } from "@/components/app/PersonAvatar";
 import { BusinessProfileCard } from "@/components/app/BusinessProfileCard";
 import { Portrait } from "@/components/site/Portrait";
 import { streamEmployeeTurn, type BrowserEvent } from "@/lib/employee-stream";
 import { supabase } from "@/integrations/supabase/client";
+import { listHumanTeam } from "@/lib/collaboration.functions";
 import {
   MediaStudio,
   type Attachment,
@@ -730,6 +731,12 @@ function ChatView({
   const navigate = useNavigate();
   const { data: workspace } = useChatWorkspace();
   const { data: profile } = useProfile();
+  const listTeam = useServerFn(listHumanTeam);
+  const { data: humanTeam } = useQuery({
+    queryKey: ["human-team", workspace?.id],
+    enabled: Boolean(workspace?.id && (workspace as { shared?: boolean } | null)?.shared),
+    queryFn: () => listTeam({ data: { workspaceId: workspace?.id ?? "" } }),
+  });
   const { data: conversation } = useEmployeeConversation(workspace?.id, id);
   const conversationId = conversation?.id;
   const markConversationRead = useMarkConversationRead(workspace?.id);
@@ -798,11 +805,11 @@ function ChatView({
   }, [conversationId, messages?.length]);
 
   /** لوحات الشريط العلوي — تُفتح كلها داخل نفس الصفحة. */
-  const [barPanel, setBarPanel] = useState<"apps" | "brand" | "work" | "more" | null>(null);
+  const [barPanel, setBarPanel] = useState<"apps" | "brand" | "work" | null>(null);
   const [barPanelAnchor, setBarPanelAnchor] = useState({ x: 0, top: 0 });
   const barPanelButtonRefs = useRef<
-    Record<"apps" | "brand" | "work" | "more", HTMLButtonElement | null>
-  >({ apps: null, brand: null, work: null, more: null });
+    Record<"apps" | "brand" | "work", HTMLButtonElement | null>
+  >({ apps: null, brand: null, work: null });
   const [embeddedTool, setEmbeddedTool] = useState<{
     tool: WorkTool;
     mode: "inline" | "expanded";
@@ -857,14 +864,14 @@ function ChatView({
   const [toolOffset, setToolOffset] = useState({ x: 0, y: 0 });
   const dragRef = useRef<{ px: number; py: number; ox: number; oy: number } | null>(null);
 
-  const positionBarPanel = (panel: "apps" | "brand" | "work" | "more") => {
-    const button = barPanelButtonRefs.current[panel] ?? barPanelButtonRefs.current.more;
+  const positionBarPanel = (panel: "apps" | "brand" | "work") => {
+    const button = barPanelButtonRefs.current[panel];
     if (!button) return;
     const rect = button.getBoundingClientRect();
     setBarPanelAnchor({ x: rect.left + rect.width / 2, top: rect.bottom + 8 });
   };
 
-  const toggleBarPanel = (panel: "apps" | "brand" | "work" | "more") => {
+  const toggleBarPanel = (panel: "apps" | "brand" | "work") => {
     if (barPanel === panel) {
       setBarPanel(null);
       return;
@@ -1335,26 +1342,18 @@ function ChatView({
             <Button ref={(button) => { barPanelButtonRefs.current.apps = button; }} type="button" variant="ghost" size="sm" className={cn("chat-nav-button", barPanel === "apps" && "is-active")} aria-label="التكاملات" title="تكاملات الموظف" aria-expanded={barPanel === "apps"} onClick={() => toggleBarPanel("apps")}>
               <PlugZap className="size-4" /><span>التكاملات</span>
             </Button>
+            <Button type="button" variant="ghost" size="sm" className="chat-nav-button" aria-label="المتصفح المنفّذ" title={`متصفح ${member.name}`} onClick={() => {
+              const browserTool = WORK_TOOLS.find((tool) => tool.id === "browser");
+              if (browserTool) setEmbeddedTool({ tool: browserTool, mode: "expanded" });
+              setBarPanel(null);
+            }}>
+              <Globe className="size-4" /><span>المتصفح</span>
+            </Button>
           </div>
           <div className="chat-employee-end-actions">
             <Button type="button" variant="ghost" size="icon-sm" className="chat-nav-button" aria-label="الإعدادات" title="الإعدادات" onClick={() => void navigate({ to: "/app/settings" })}>
               <Settings2 className="size-4" />
             </Button>
-            <Button
-            ref={(button) => {
-              barPanelButtonRefs.current.more = button;
-            }}
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            onClick={() => toggleBarPanel("more")}
-            aria-expanded={barPanel === "more"}
-            aria-label="المزيد"
-            title="المزيد"
-            className={cn("chat-nav-button", barPanel === "more" && "is-active")}
-          >
-            <MoreHorizontal className="size-4 shrink-0" />
-          </Button>
           </div>
         </div>
       </ChatShellActions>
@@ -1416,6 +1415,7 @@ function ChatView({
               const isUser = m.role === "user";
               const body = isUser ? m.body : prettyBody(m.body);
               const parsedUser = isUser ? splitUserBody(m.body) : null;
+              const sender = isUser && m.sender_id ? humanTeam?.members.find((person) => person.userId === m.sender_id) : null;
               const priorRequest = messageRequests[idx] ?? "";
               return (
                 <div key={m.id} className="space-y-4">
@@ -1440,7 +1440,15 @@ function ChatView({
                         <span className="relative order-2 mt-1 block size-9 shrink-0 overflow-hidden rounded-xl shadow-sm">
                           <Portrait memberId={member.id} name={member.name} className="size-full" />
                         </span>
-                      ) : null}
+                      ) : (
+                        <span className="relative mt-1 block size-9 shrink-0 overflow-hidden rounded-full border border-border shadow-sm">
+                          {(workspace as { shared?: boolean } | null)?.shared ? (
+                            <PersonAvatar avatar={sender?.avatar} name={sender?.name ?? m.sender_name ?? "عضو الفريق"} className="size-full rounded-full" />
+                          ) : (
+                            <UserAvatar />
+                          )}
+                        </span>
+                      )}
                       <div
                         className={cn(
                           "min-w-0",
@@ -1449,9 +1457,11 @@ function ChatView({
                             : "order-1 w-full max-w-[min(76rem,calc(100%-3rem))]",
                         )}
                       >
-                        {isUser && (workspace as { shared?: boolean } | null)?.shared && (m as { sender_name?: string | null }).sender_name ? (
+                        {isUser ? (
                           <span className="mb-1 block text-[0.7rem] font-bold text-muted-foreground">
-                            {(m as { sender_name?: string | null }).sender_name}
+                            {(workspace as { shared?: boolean } | null)?.shared
+                              ? sender?.name ?? m.sender_name ?? "عضو الفريق"
+                              : profile?.full_name ?? "أنت"}
                           </span>
                         ) : null}
                         {parsedUser?.items.length ? (
@@ -1650,7 +1660,15 @@ function ChatView({
               (m) => m.role === "user" && m.body.trim() === pending.trim(),
             ) ? (
               <div className="flex justify-start gap-3 animate-bubble-in">
+                <span className="relative mt-1 block size-9 shrink-0 overflow-hidden rounded-full border border-border shadow-sm">
+                  {(workspace as { shared?: boolean } | null)?.shared ? (
+                    <PersonAvatar avatar={profile?.avatar_url} name={profile?.full_name ?? "أنت"} className="size-full rounded-full" />
+                  ) : (
+                    <UserAvatar />
+                  )}
+                </span>
                 <div className="min-w-0 w-fit max-w-[min(34rem,72%)]">
+                  <span className="mb-1 block text-[0.7rem] font-bold text-muted-foreground">{profile?.full_name ?? "أنت"}</span>
                   {attachments.length ? (
                     <ChatAttachments items={attachments} className="mb-2" />
                   ) : null}
@@ -2031,9 +2049,7 @@ function ChatView({
                   ? `تكاملات ${member.name}`
                   : barPanel === "brand"
                     ? "موقع النشاط"
-                    : barPanel === "work"
-                        ? `تشغيل ومتابعة ${member.name}`
-                        : "المزيد"
+                    : `تشغيل ومتابعة ${member.name}`
               }
             >
               <div className="topbar-sheet-head">
@@ -2041,8 +2057,6 @@ function ChatView({
                   <PlugZap className="size-4 text-primary" />
                 ) : barPanel === "work" ? (
                   <Bot className="size-4 text-primary" />
-                ) : barPanel === "more" ? (
-                  <MoreHorizontal className="size-4 text-primary" />
                 ) : (
                   <Globe className="size-4 text-primary" />
                 )}
@@ -2052,18 +2066,14 @@ function ChatView({
                       ? `تكاملات ${member.name}`
                       : barPanel === "brand"
                         ? "موقع النشاط"
-                      : barPanel === "work"
-                            ? `تشغيل ومتابعة ${member.name}`
-                            : "المزيد"}
+                       : `تشغيل ومتابعة ${member.name}`}
                   </p>
                   <span>
                     {barPanel === "apps"
                       ? "اربط الحسابات التي يحتاجها من هنا مباشرة"
                       : barPanel === "brand"
                         ? "المصادر التي يقرأها ونبرة كتابته"
-                        : barPanel === "work"
-                            ? "كل ما يستطيع تنفيذه ومتابعته"
-                            : "القدرات والتكاملات وإعدادات العمل"}
+                         : "كل ما يستطيع تنفيذه ومتابعته"}
                   </span>
                 </div>
                 <button type="button" onClick={() => setBarPanel(null)} aria-label="إغلاق">
@@ -2071,41 +2081,7 @@ function ChatView({
                 </button>
               </div>
 
-              {barPanel === "more" ? (
-                <div className="chat-more-menu">
-                  <SkillPalette
-                    skills={employeeSkills}
-                    quick={quickSkills}
-                    hideQuick
-                    disabled={!workspace}
-                    pending={busy}
-                    onRun={(skill, values) => {
-                      setBarPanel(null);
-                      setError(null);
-                      skillRun.mutate({ skill, values });
-                    }}
-                  />
-                  {member.apps.length ? (
-                    <button type="button" onClick={() => toggleBarPanel("apps")}>
-                      <PlugZap className="size-4" />
-                      <span>التكاملات</span>
-                      <small>{owned.filter((item) => item.status === "connected").length}/{member.apps.length}</small>
-                    </button>
-                  ) : null}
-                  {BAR_BRAND.has(member.id) ? (
-                    <button type="button" onClick={() => toggleBarPanel("brand")}>
-                      <BookOpenText className="size-4" />
-                      <span>موقع النشاط</span>
-                    </button>
-                  ) : null}
-                  {BAR_WORK.has(member.id) ? (
-                    <button type="button" onClick={() => toggleBarPanel("work")}>
-                      <Bot className="size-4" />
-                      <span>التشغيل والمتابعة</span>
-                    </button>
-                  ) : null}
-                </div>
-              ) : barPanel === "apps" ? (
+              {barPanel === "apps" ? (
                 <div className="mt-1">
                   {member.apps.map((provider) => {
                     const row = owned.find((i) => i.provider === provider);

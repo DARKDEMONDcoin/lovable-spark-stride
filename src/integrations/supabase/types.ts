@@ -2498,6 +2498,7 @@ export type Database = {
       }
       workspaces: {
         Row: {
+          archived_at: string | null
           banned_words: string[]
           country: string | null
           created_at: string
@@ -2515,6 +2516,7 @@ export type Database = {
           website: string | null
         }
         Insert: {
+          archived_at?: string | null
           banned_words?: string[]
           country?: string | null
           created_at?: string
@@ -2532,6 +2534,7 @@ export type Database = {
           website?: string | null
         }
         Update: {
+          archived_at?: string | null
           banned_words?: string[]
           country?: string | null
           created_at?: string
@@ -2584,6 +2587,10 @@ export type Database = {
         }[]
       }
       owns_workspace: { Args: { _workspace_id: string }; Returns: boolean }
+      transfer_project_ownership: {
+        Args: { _new_owner: string; _workspace_id: string }
+        Returns: undefined
+      }
       verify_cron_token: {
         Args: { _name: string; _token: string }
         Returns: boolean

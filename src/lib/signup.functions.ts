@@ -10,6 +10,7 @@ const schema = z.object({
   fullName: z.string().min(3).max(80),
   company: z.string().min(2).max(80),
   dialect: z.string().min(2).max(20),
+  referralCode: z.string().trim().toUpperCase().regex(/^[A-Z0-9]{8,16}$/).optional(),
 });
 
 /**
@@ -27,7 +28,7 @@ export const createAccount = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const email = data.email.trim().toLowerCase();
 
-    const { error } = await supabaseAdmin.auth.admin.createUser({
+    const { data: created, error } = await supabaseAdmin.auth.admin.createUser({
       email,
       password: data.password,
       email_confirm: true,
@@ -46,6 +47,18 @@ export const createAccount = createServerFn({ method: "POST" })
       if (msg.includes("password")) return { ok: false as const, reason: "password" as const };
       console.error("[signup] createUser failed:", error.message);
       return { ok: false as const, reason: "unknown" as const };
+    }
+
+    if (created.user && data.referralCode) {
+      const { data: referrer } = await supabaseAdmin.from("referral_accounts").select("user_id,code").eq("code", data.referralCode).maybeSingle();
+      if (referrer && referrer.user_id !== created.user.id) {
+        await supabaseAdmin.from("referral_attributions").insert({
+          referrer_user_id: referrer.user_id,
+          referred_user_id: created.user.id,
+          code: referrer.code,
+          status: "signed_up",
+        });
+      }
     }
 
     return { ok: true as const };

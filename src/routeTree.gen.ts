@@ -63,6 +63,7 @@ import { Route as BlogIndexRouteImport } from './routes/blog.index'
 import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
 import { Route as EmployeesIndexRouteImport } from './routes/employees.index'
 import { Route as EmployeesIdRouteImport } from './routes/employees.$id'
+import { Route as RCodeRouteImport } from './routes/r.$code'
 import { Route as STokenRouteImport } from './routes/s.$token'
 import { Route as UseCasesIndexRouteImport } from './routes/use-cases.index'
 import { Route as UseCasesIdRouteImport } from './routes/use-cases.$id'
@@ -74,6 +75,7 @@ import { Route as ApiPublicNourWeeklyRouteImport } from './routes/api/public/nou
 import { Route as ApiPublicPipedreamWebhookRouteImport } from './routes/api/public/pipedream-webhook'
 import { Route as ApiPublicProactiveRouteImport } from './routes/api/public/proactive'
 import { Route as ApiPublicPxRouteImport } from './routes/api/public/px'
+import { Route as ApiPublicReferralClickRouteImport } from './routes/api/public/referral-click'
 import { Route as ApiPublicSocialAutopilotRouteImport } from './routes/api/public/social-autopilot'
 import { Route as ApiPublicSocialQueueRouteImport } from './routes/api/public/social-queue'
 import { Route as ApiPublicTelegramNotifyRouteImport } from './routes/api/public/telegram-notify'
@@ -354,6 +356,11 @@ const EmployeesIdRoute = EmployeesIdRouteImport.update({
   path: '/employees/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RCodeRoute = RCodeRouteImport.update({
+  id: '/r/$code',
+  path: '/r/$code',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const STokenRoute = STokenRouteImport.update({
   id: '/s/$token',
   path: '/s/$token',
@@ -410,6 +417,11 @@ const ApiPublicProactiveRoute = ApiPublicProactiveRouteImport.update({
 const ApiPublicPxRoute = ApiPublicPxRouteImport.update({
   id: '/api/public/px',
   path: '/api/public/px',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicReferralClickRoute = ApiPublicReferralClickRouteImport.update({
+  id: '/api/public/referral-click',
+  path: '/api/public/referral-click',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicSocialAutopilotRoute =
@@ -513,6 +525,7 @@ export interface FileRoutesByFullPath {
   '/app/workspace': typeof AppWorkspaceRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/employees/$id': typeof EmployeesIdRoute
+  '/r/$code': typeof RCodeRoute
   '/s/$token': typeof STokenRoute
   '/use-cases/$id': typeof UseCasesIdRoute
   '/app/': typeof AppIndexRoute
@@ -527,6 +540,7 @@ export interface FileRoutesByFullPath {
   '/api/public/pipedream-webhook': typeof ApiPublicPipedreamWebhookRoute
   '/api/public/proactive': typeof ApiPublicProactiveRoute
   '/api/public/px': typeof ApiPublicPxRoute
+  '/api/public/referral-click': typeof ApiPublicReferralClickRoute
   '/api/public/social-autopilot': typeof ApiPublicSocialAutopilotRoute
   '/api/public/social-queue': typeof ApiPublicSocialQueueRoute
   '/api/public/telegram-notify': typeof ApiPublicTelegramNotifyRoute
@@ -587,6 +601,7 @@ export interface FileRoutesByTo {
   '/app/workspace': typeof AppWorkspaceRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/employees/$id': typeof EmployeesIdRoute
+  '/r/$code': typeof RCodeRoute
   '/s/$token': typeof STokenRoute
   '/use-cases/$id': typeof UseCasesIdRoute
   '/app': typeof AppIndexRoute
@@ -601,6 +616,7 @@ export interface FileRoutesByTo {
   '/api/public/pipedream-webhook': typeof ApiPublicPipedreamWebhookRoute
   '/api/public/proactive': typeof ApiPublicProactiveRoute
   '/api/public/px': typeof ApiPublicPxRoute
+  '/api/public/referral-click': typeof ApiPublicReferralClickRoute
   '/api/public/social-autopilot': typeof ApiPublicSocialAutopilotRoute
   '/api/public/social-queue': typeof ApiPublicSocialQueueRoute
   '/api/public/telegram-notify': typeof ApiPublicTelegramNotifyRoute
@@ -664,6 +680,7 @@ export interface FileRoutesById {
   '/app/workspace': typeof AppWorkspaceRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/employees/$id': typeof EmployeesIdRoute
+  '/r/$code': typeof RCodeRoute
   '/s/$token': typeof STokenRoute
   '/use-cases/$id': typeof UseCasesIdRoute
   '/app/': typeof AppIndexRoute
@@ -678,6 +695,7 @@ export interface FileRoutesById {
   '/api/public/pipedream-webhook': typeof ApiPublicPipedreamWebhookRoute
   '/api/public/proactive': typeof ApiPublicProactiveRoute
   '/api/public/px': typeof ApiPublicPxRoute
+  '/api/public/referral-click': typeof ApiPublicReferralClickRoute
   '/api/public/social-autopilot': typeof ApiPublicSocialAutopilotRoute
   '/api/public/social-queue': typeof ApiPublicSocialQueueRoute
   '/api/public/telegram-notify': typeof ApiPublicTelegramNotifyRoute
@@ -742,6 +760,7 @@ export interface FileRouteTypes {
     | '/app/workspace'
     | '/blog/$slug'
     | '/employees/$id'
+    | '/r/$code'
     | '/s/$token'
     | '/use-cases/$id'
     | '/app/'
@@ -756,6 +775,7 @@ export interface FileRouteTypes {
     | '/api/public/pipedream-webhook'
     | '/api/public/proactive'
     | '/api/public/px'
+    | '/api/public/referral-click'
     | '/api/public/social-autopilot'
     | '/api/public/social-queue'
     | '/api/public/telegram-notify'
@@ -816,6 +836,7 @@ export interface FileRouteTypes {
     | '/app/workspace'
     | '/blog/$slug'
     | '/employees/$id'
+    | '/r/$code'
     | '/s/$token'
     | '/use-cases/$id'
     | '/app'
@@ -830,6 +851,7 @@ export interface FileRouteTypes {
     | '/api/public/pipedream-webhook'
     | '/api/public/proactive'
     | '/api/public/px'
+    | '/api/public/referral-click'
     | '/api/public/social-autopilot'
     | '/api/public/social-queue'
     | '/api/public/telegram-notify'
@@ -892,6 +914,7 @@ export interface FileRouteTypes {
     | '/app/workspace'
     | '/blog/$slug'
     | '/employees/$id'
+    | '/r/$code'
     | '/s/$token'
     | '/use-cases/$id'
     | '/app/'
@@ -906,6 +929,7 @@ export interface FileRouteTypes {
     | '/api/public/pipedream-webhook'
     | '/api/public/proactive'
     | '/api/public/px'
+    | '/api/public/referral-click'
     | '/api/public/social-autopilot'
     | '/api/public/social-queue'
     | '/api/public/telegram-notify'
@@ -945,6 +969,7 @@ export interface RootRouteChildren {
   ApiTranscribeRoute: typeof ApiTranscribeRoute
   BlogSlugRoute: typeof BlogSlugRoute
   EmployeesIdRoute: typeof EmployeesIdRoute
+  RCodeRoute: typeof RCodeRoute
   STokenRoute: typeof STokenRoute
   UseCasesIdRoute: typeof UseCasesIdRoute
   BlogIndexRoute: typeof BlogIndexRoute
@@ -958,6 +983,7 @@ export interface RootRouteChildren {
   ApiPublicPipedreamWebhookRoute: typeof ApiPublicPipedreamWebhookRoute
   ApiPublicProactiveRoute: typeof ApiPublicProactiveRoute
   ApiPublicPxRoute: typeof ApiPublicPxRoute
+  ApiPublicReferralClickRoute: typeof ApiPublicReferralClickRoute
   ApiPublicSocialAutopilotRoute: typeof ApiPublicSocialAutopilotRoute
   ApiPublicSocialQueueRoute: typeof ApiPublicSocialQueueRoute
   ApiPublicTelegramNotifyRoute: typeof ApiPublicTelegramNotifyRoute
@@ -1347,6 +1373,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EmployeesIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/r/$code': {
+      id: '/r/$code'
+      path: '/r/$code'
+      fullPath: '/r/$code'
+      preLoaderRoute: typeof RCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/s/$token': {
       id: '/s/$token'
       path: '/s/$token'
@@ -1422,6 +1455,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/px'
       fullPath: '/api/public/px'
       preLoaderRoute: typeof ApiPublicPxRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/referral-click': {
+      id: '/api/public/referral-click'
+      path: '/api/public/referral-click'
+      fullPath: '/api/public/referral-click'
+      preLoaderRoute: typeof ApiPublicReferralClickRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/social-autopilot': {
@@ -1589,6 +1629,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiTranscribeRoute: ApiTranscribeRoute,
   BlogSlugRoute: BlogSlugRoute,
   EmployeesIdRoute: EmployeesIdRoute,
+  RCodeRoute: RCodeRoute,
   STokenRoute: STokenRoute,
   UseCasesIdRoute: UseCasesIdRoute,
   BlogIndexRoute: BlogIndexRoute,
@@ -1602,6 +1643,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicPipedreamWebhookRoute: ApiPublicPipedreamWebhookRoute,
   ApiPublicProactiveRoute: ApiPublicProactiveRoute,
   ApiPublicPxRoute: ApiPublicPxRoute,
+  ApiPublicReferralClickRoute: ApiPublicReferralClickRoute,
   ApiPublicSocialAutopilotRoute: ApiPublicSocialAutopilotRoute,
   ApiPublicSocialQueueRoute: ApiPublicSocialQueueRoute,
   ApiPublicTelegramNotifyRoute: ApiPublicTelegramNotifyRoute,

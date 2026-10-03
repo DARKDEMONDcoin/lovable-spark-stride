@@ -38,4 +38,5 @@
 - Team spaces share employee chats: stream route verifies membership, runs turn via admin client; messages store sender. Why: shared human+AI threads.
 - Invitees accept/decline in the AppShell NotificationBell (`invite-inbox.functions.ts`); inviters get a `user_notifications` row. Why: no reliance on copied links.
 - Project spaces get a team block (members + sender) in employee turns; stream passes verified client+sender. Why: chats address the team.
-- Referral earnings come only from verified payments, wait through the refund window, and are never user-writable. Why: earnings must be trustworthy.
+- Referral earnings require verified payments and refund maturity; users cannot write them.
+- Feedback/support are private user records behind RLS.

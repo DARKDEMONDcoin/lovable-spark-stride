@@ -25,6 +25,7 @@ import { Route as IntegrationsRouteImport } from './routes/integrations'
 import { Route as InviteRouteImport } from './routes/invite'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as ReferralTermsRouteImport } from './routes/referral-terms'
 import { Route as RefundsRouteImport } from './routes/refunds'
 import { Route as SecurityRouteImport } from './routes/security'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
@@ -164,6 +165,11 @@ const PricingRoute = PricingRouteImport.update({
 const PrivacyRoute = PrivacyRouteImport.update({
   id: '/privacy',
   path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReferralTermsRoute = ReferralTermsRouteImport.update({
+  id: '/referral-terms',
+  path: '/referral-terms',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RefundsRoute = RefundsRouteImport.update({
@@ -490,6 +496,7 @@ export interface FileRoutesByFullPath {
   '/invite': typeof InviteRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
+  '/referral-terms': typeof ReferralTermsRoute
   '/refunds': typeof RefundsRoute
   '/security': typeof SecurityRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -567,6 +574,7 @@ export interface FileRoutesByTo {
   '/invite': typeof InviteRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
+  '/referral-terms': typeof ReferralTermsRoute
   '/refunds': typeof RefundsRoute
   '/security': typeof SecurityRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -645,6 +653,7 @@ export interface FileRoutesById {
   '/invite': typeof InviteRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
+  '/referral-terms': typeof ReferralTermsRoute
   '/refunds': typeof RefundsRoute
   '/security': typeof SecurityRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -725,6 +734,7 @@ export interface FileRouteTypes {
     | '/invite'
     | '/pricing'
     | '/privacy'
+    | '/referral-terms'
     | '/refunds'
     | '/security'
     | '/sitemap.xml'
@@ -802,6 +812,7 @@ export interface FileRouteTypes {
     | '/invite'
     | '/pricing'
     | '/privacy'
+    | '/referral-terms'
     | '/refunds'
     | '/security'
     | '/sitemap.xml'
@@ -879,6 +890,7 @@ export interface FileRouteTypes {
     | '/invite'
     | '/pricing'
     | '/privacy'
+    | '/referral-terms'
     | '/refunds'
     | '/security'
     | '/sitemap.xml'
@@ -958,6 +970,7 @@ export interface RootRouteChildren {
   InviteRoute: typeof InviteRoute
   PricingRoute: typeof PricingRoute
   PrivacyRoute: typeof PrivacyRoute
+  ReferralTermsRoute: typeof ReferralTermsRoute
   RefundsRoute: typeof RefundsRoute
   SecurityRoute: typeof SecurityRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
@@ -1105,6 +1118,13 @@ declare module '@tanstack/react-router' {
       path: '/privacy'
       fullPath: '/privacy'
       preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/referral-terms': {
+      id: '/referral-terms'
+      path: '/referral-terms'
+      fullPath: '/referral-terms'
+      preLoaderRoute: typeof ReferralTermsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/refunds': {
@@ -1618,6 +1638,7 @@ const rootRouteChildren: RootRouteChildren = {
   InviteRoute: InviteRoute,
   PricingRoute: PricingRoute,
   PrivacyRoute: PrivacyRoute,
+  ReferralTermsRoute: ReferralTermsRoute,
   RefundsRoute: RefundsRoute,
   SecurityRoute: SecurityRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,

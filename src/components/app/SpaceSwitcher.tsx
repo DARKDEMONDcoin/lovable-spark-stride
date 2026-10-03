@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
 
 type Space = { id: string; name: string; kind: string; owned: boolean; logo: string | null };
 
-function SpaceIcon({ space, className }: { space?: Pick<Space, "name" | "logo" | "kind"> | null; className?: string }) {
+function SpaceIcon({ space, className }: { space?: Pick<Space, "name" | "logo" | "kind"> | null | undefined; className?: string }) {
   if (space?.logo) return <img src={space.logo} alt="" className={cn("size-9 shrink-0 rounded-lg border border-border object-cover", className)} />;
   return (
     <span className={cn("grid size-9 shrink-0 place-items-center rounded-lg border border-border bg-primary/10 font-display text-sm font-black text-primary", className)}>
@@ -103,13 +103,13 @@ function CreateProjectDialog({ open, onOpenChange, onCreated }: { open: boolean;
 
   const addInvite = () => {
     const e = email.trim().toLowerCase();
-    if (!/^\S+@\S+\.\S+$/.test(e)) return toast.error("اكتب بريدًا صحيحًا");
+    if (!/^\S+@\S+\.\S+$/.test(e)) { toast.error("اكتب بريدًا صحيحًا"); return; }
     if (!invites.includes(e)) setInvites([...invites, e]);
     setEmail("");
   };
 
   const submit = async () => {
-    if (name.trim().length < 2) return toast.error("اكتب اسم المشروع");
+    if (name.trim().length < 2) { toast.error("اكتب اسم المشروع"); return; }
     setBusy(true);
     try {
       let logoPath: string | undefined;

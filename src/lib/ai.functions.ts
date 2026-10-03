@@ -828,6 +828,30 @@ export async function runEmployeeTurn(
     const ownerFirstName =
       (ownerProfile?.full_name ?? "").trim().split(/\s+/).filter(Boolean)[0] ?? null;
 
+    // Team project space: the chat belongs to the project team, not one person.
+    const isTeamProject = (workspace as { kind?: string }).kind === "project";
+    let teamBlock = "";
+    let speakerFirstName = ownerFirstName;
+    if (isTeamProject) {
+      // Names only; access to this workspace was verified before the turn started.
+      const { supabaseAdmin: teamReader } = await import("@/integrations/supabase/client.server");
+      const { data: members } = await teamReader
+        .from("workspace_members")
+        .select("user_id")
+        .eq("workspace_id", data.workspaceId);
+      const ids = [workspace.owner_id, ...(members ?? []).map((m) => m.user_id)];
+      const { data: people } = await teamReader.from("profiles").select("id, full_name").in("id", ids);
+      const names = (people ?? []).map((p) => (p.full_name ?? "").trim()).filter(Boolean);
+      speakerFirstName = (context.senderName ?? "").trim().split(/\s+/)[0] || ownerFirstName;
+      teamBlock = [
+        `## محادثة فريق مشروع «${workspace.name}»`,
+        `هذه محادثة مشتركة لفريق المشروع كله لا لشخص واحد. أعضاء الفريق: ${names.join("، ") || "غير محدد"}.`,
+        `المتحدث الآن: ${context.senderName?.trim() || ownerFirstName || "عضو في الفريق"}. خاطبه باسمه، وتذكّر أن بقية الفريق يقرأ نفس الرد.`,
+        "رسائل البشر السابقة مسبوقة باسم كاتبها بين قوسين؛ تابع من طلب ماذا ولا تنسب طلب شخص لغيره.",
+        "المخرجات والقرارات ملك المشروع والفريق: تكلّم بصيغة «مشروعنا/فريقكم» لا «حسابك الشخصي»، ولا تذكر بيانات أي حساب شخصي خارج هذا المشروع.",
+      ].join("\n");
+    }
+
     // «اليوم الأول»: هل تحدّث معه هذا الموظف من قبل إطلاقاً في هذه المساحة؟
     let firstEverTurn = false;
     if ((history ?? []).length === 0) {
@@ -900,12 +924,13 @@ export async function runEmployeeTurn(
       turnPlanBlock(turnPlan),
       answerPolicyBlock(agentId, intent),
       reasoningDepthBlock(agentId as EmployeeId, intent),
+      teamBlock,
       coworkerVoiceBlock({
         employeeId: agentId,
         firstEver: firstEverTurn,
         employeeName: persona.name,
         role: persona.role,
-        userName: ownerFirstName,
+        userName: speakerFirstName,
         userTitle: ownerProfile?.job_title ?? null,
         intent,
         firstMessage: (history ?? []).length === 0,

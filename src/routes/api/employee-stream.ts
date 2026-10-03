@@ -103,7 +103,7 @@ export const Route = createFileRoute("/api/employee-stream")({
                 const startedAt = new Date(Date.now() - 2_000).toISOString();
                 const result = await runEmployeeTurn(
                   parsed.data,
-                  { supabase },
+                  { supabase: turnClient, ...sender },
                   (event: TurnEvent) => send(event),
                 );
                 send({ type: "done", result });

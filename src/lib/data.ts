@@ -113,7 +113,8 @@ export function useChatWorkspace() {
       data: { id: shared.id, name: shared.name, shared: true } as unknown as Workspace & { shared?: boolean },
     };
   }
-  return { ...own, data: own.data ? ({ ...own.data, shared: false } as Workspace & { shared?: boolean }) : own.data };
+  const isProject = own.data?.kind === "project";
+  return { ...own, data: own.data ? ({ ...own.data, shared: isProject } as Workspace & { shared?: boolean }) : own.data };
 }
 
 export function useNotificationPreferences() {
@@ -300,6 +301,8 @@ export function useMessages(
   return useQuery({
     queryKey: ["messages", workspaceId, employeeId, conversationId],
     enabled: !!workspaceId && !!conversationId,
+    // Team spaces share one thread; pick up teammates' messages without a reload.
+    refetchInterval: 10_000,
     queryFn: () =>
       must<Message[]>(
         supabase

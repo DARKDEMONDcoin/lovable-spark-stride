@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { ArrowLeft, CalendarClock, CheckCircle2, Inbox, Loader2, MessageCircle, Sparkles, Users } from "lucide-react";
+import { ArrowLeft, Bot, CalendarClock, Clock3, Gavel, Lightbulb, ListChecks, Send, Workflow, CheckCircle2, Inbox, Loader2, MessageCircle, Sparkles, Users } from "lucide-react";
 
 import { Portrait } from "@/components/site/Portrait";
 import { PersonAvatar } from "@/components/app/PersonAvatar";
@@ -119,6 +119,27 @@ export function WorkspaceToday({ tasks, projects, people, meId, ownWorkspaceId, 
               })}
             </ul>
           )}
+        </div>
+      </div>
+
+      <div className="rounded-md border border-border p-5">
+        <h3 className="font-display text-lg font-black">كل أدوات المتابعة</h3>
+        <p className="mt-1 text-xs text-muted-foreground">كل ما يخص شغل فريقك في مكان واحد.</p>
+        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {([
+            { to: "/app/approvals", label: "الموافقات", icon: CheckCircle2 },
+            { to: "/app/tasks", label: "كل المهام", icon: ListChecks },
+            { to: "/app/queue", label: "جدول النشر", icon: Send },
+            { to: "/app/proposals", label: "اقتراحات الفريق", icon: Lightbulb },
+            { to: "/app/decisions", label: "القرارات", icon: Gavel },
+            { to: "/app/autopilot", label: "النشر التلقائي", icon: Bot },
+            { to: "/app/automations", label: "المهام المتكررة", icon: Clock3 },
+            { to: "/app/team-tasks", label: "مهام جماعية", icon: Workflow },
+          ] as const).map((l) => (
+            <Link key={l.to} to={l.to} className="flex items-center gap-2 rounded-md border border-border px-3 py-3 text-sm font-bold hover:border-primary hover:text-primary">
+              <l.icon className="size-4 shrink-0 text-primary" />{l.label}
+            </Link>
+          ))}
         </div>
       </div>
     </section>

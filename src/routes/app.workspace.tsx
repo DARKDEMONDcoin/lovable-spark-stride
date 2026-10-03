@@ -2,7 +2,7 @@ import { useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Activity, Archive, CalendarClock, CalendarDays, Check, ListTodo, RotateCw, ClipboardCopy, FolderKanban, Link2, LogOut, Plus, Settings2, Sparkles, Trash2, UserPlus, Users, X } from "lucide-react";
+import { Activity, Archive, CalendarClock, CalendarDays, Check, ListTodo, RotateCw, FolderKanban, Link2, LogOut, Plus, Settings2, Sparkles, Trash2, UserPlus, Users, X } from "lucide-react";
 import { WorkspaceCalendar } from "@/components/app/workspace/WorkspaceCalendar";
 import { WorkspaceToday } from "@/components/app/workspace/WorkspaceToday";
 import { WorkspaceTour } from "@/components/app/workspace/WorkspaceTour";

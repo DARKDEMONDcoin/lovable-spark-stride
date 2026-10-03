@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { ArrowLeft, CalendarClock, CheckCircle2, Inbox, Loader2, MessageCircle, Sparkles, Users } from "lucide-react";
 
+import { Portrait } from "@/components/site/Portrait";
 import { PersonAvatar } from "@/components/app/PersonAvatar";
 import { getMember, team } from "@/data/team";
 import type { Tables } from "@/integrations/supabase/types";
@@ -90,7 +91,7 @@ export function WorkspaceToday({ tasks, projects, people, meId, ownWorkspaceId, 
                   <EmployeeDot id={m.id} />
                   <span className="min-w-0 flex-1">
                     <span className="block text-sm font-bold">{m.name} <span className="font-normal text-muted-foreground">· {m.role}</span></span>
-                    <span className="block truncate text-xs text-muted-foreground">{mineRunning.length ? `يعمل على: ${mineRunning[0].title}` : "متاح"}</span>
+                    <span className="block truncate text-xs text-muted-foreground">{mineRunning.length ? `يعمل على: ${mineRunning[0]?.title}` : "متاح"}</span>
                   </span>
                   <Link to="/app/chat/$id" params={{ id: m.id }} aria-label={`تحدث مع ${m.name}`} className="grid size-8 place-items-center rounded-md text-primary hover:bg-secondary"><MessageCircle className="size-4" /></Link>
                 </li>
@@ -111,7 +112,7 @@ export function WorkspaceToday({ tasks, projects, people, meId, ownWorkspaceId, 
                     <PersonAvatar avatar={p.avatar} name={p.name} className="size-8" />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-bold">{p.name}{p.userId === meId ? " (أنت)" : ""}</span>
-                      <span className="block truncate text-xs text-muted-foreground">{theirs.length ? `${theirs.length} مهمة مفتوحة · ${theirs[0].title}` : "لا مهام مفتوحة"}</span>
+                      <span className="block truncate text-xs text-muted-foreground">{theirs.length ? `${theirs.length} مهمة مفتوحة · ${theirs[0]?.title}` : "لا مهام مفتوحة"}</span>
                     </span>
                   </li>
                 );
@@ -126,7 +127,7 @@ export function WorkspaceToday({ tasks, projects, people, meId, ownWorkspaceId, 
 
 function EmployeeDot({ id }: { id: string }) {
   const m = getMember(id);
-  return <span className="grid size-8 shrink-0 place-items-center rounded-full text-xs font-black" style={{ background: m?.tintSoft }}>{m?.name.slice(0, 1) ?? "؟"}</span>;
+  return <span className="block size-8 shrink-0 overflow-hidden rounded-full" style={{ background: m?.tintSoft }}><Portrait memberId={id} name={m?.name ?? ""} className="size-full" /></span>;
 }
 
 function Stat({ icon: Icon, label, value, urgent }: { icon: typeof Inbox; label: string; value: number; urgent?: boolean }) {

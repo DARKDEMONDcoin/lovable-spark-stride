@@ -12,6 +12,7 @@ import { runCollabTaskWithEmployee } from "@/lib/collab-ai.functions";
 import { team, getMember } from "@/data/team";
 import { cn } from "@/lib/utils";
 import type { Tables } from "@/integrations/supabase/types";
+import { TaskAttachments } from "./TaskAttachments";
 
 type Project = Tables<"collaboration_projects">;
 type WorkItem = Tables<"collaboration_tasks">;
@@ -182,6 +183,7 @@ function Comments({ task, people }: { task: WorkItem; people: Person[] }) {
 
 function TaskDetail({ task, people, onClose, onChanged }: { task: WorkItem; people: Person[]; onClose: () => void; onChanged: () => void }) {
   const run = useServerFn(runCollabTaskWithEmployee);
+  const me = useQuery({ queryKey: ["me-id"], queryFn: async () => (await supabase.auth.getUser()).data.user?.id ?? null });
   const [notes, setNotes] = useState(task.notes ?? "");
   const [copied, setCopied] = useState(false);
   const update = useMutation({ mutationFn: async (patch: Partial<WorkItem>) => {
@@ -223,6 +225,7 @@ function TaskDetail({ task, people, onClose, onChanged }: { task: WorkItem; peop
       <label className="block text-sm font-black"><span className="flex items-center gap-2"><StickyNote className="size-4" /> ملاحظات الفريق</span>
         <textarea value={notes} onChange={(e) => setNotes(e.target.value)} onBlur={() => { if (notes !== (task.notes ?? "")) update.mutate({ notes }); }} rows={3} maxLength={4000} placeholder="سياق، روابط، أو ملاحظات للمراجعة — يستخدمها الموظف الرقمي عند التنفيذ." className="mt-2 w-full rounded-md border border-border bg-background p-3 text-sm font-normal" />
       </label>
+      <TaskAttachments taskId={task.id} workspaceId={task.workspace_id} meId={me.data} />
       <Comments task={task} people={people} />
       {err && <p role="alert" className="text-sm text-destructive">{err.message}</p>}
       <div className="flex justify-end"><Button variant="ghost" size="sm" className="text-destructive" disabled={remove.isPending} onClick={() => { if (window.confirm("حذف هذه المهمة؟")) remove.mutate(); }}>حذف المهمة</Button></div>

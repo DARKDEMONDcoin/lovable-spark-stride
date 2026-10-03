@@ -45,6 +45,21 @@ export const listMyInbox = createServerFn({ method: "GET" }).middleware([require
         }
       }
     }
+    // تذكيرات المواعيد: مهام مسندة لي تستحق اليوم/غداً أو متأخرة — مرة واحدة يومياً لكل مهمة.
+    try {
+      const today = new Date(); const dayStart = new Date(today); dayStart.setUTCHours(0, 0, 0, 0);
+      const tomorrow = new Date(today.getTime() + 86400000).toISOString().slice(0, 10);
+      const { data: due } = await admin.from("collaboration_tasks").select("id, title, due_date, workspace_id")
+        .eq("assignee_id", context.userId).neq("status", "done").not("due_date", "is", null).lte("due_date", tomorrow).limit(20);
+      if (due?.length) {
+        const { data: sent } = await admin.from("user_notifications").select("title").eq("user_id", context.userId).eq("kind", "task_due").gte("created_at", dayStart.toISOString());
+        const already = new Set((sent ?? []).map((s) => s.title));
+        const todayStr = today.toISOString().slice(0, 10);
+        const rows = due.map((t) => ({ user_id: context.userId, workspace_id: t.workspace_id, kind: "task_due", title: `موعد مهمة: ${t.title}`.slice(0, 200), body: t.due_date! < todayStr ? "تجاوزت موعدها — راجعها الآن." : t.due_date === todayStr ? "تستحق اليوم." : "تستحق غداً." }))
+          .filter((r) => !already.has(r.title));
+        if (rows.length) await admin.from("user_notifications").insert(rows);
+      }
+    } catch { /* التذكير اختياري */ }
     const { data: notes } = await context.supabase.from("user_notifications")
       .select("id, kind, title, body, workspace_id, read_at, created_at")
       .order("created_at", { ascending: false }).limit(30);

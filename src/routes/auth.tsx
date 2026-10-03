@@ -15,6 +15,7 @@ const searchSchema = z.object({
   mode: z.enum(["signup", "signin"]).default("signup").optional(),
   plan: z.enum(["start", "growth"]).optional(),
   invite: z.string().regex(/^[a-f0-9]{64}$/).optional(),
+  ref: z.string().regex(/^[A-Z0-9]{8,16}$/).optional(),
 });
 
 export const Route = createFileRoute("/auth")({
@@ -171,7 +172,7 @@ function AuthPage() {
     setErrors({});
     setFormError("");
     setResetSent(false);
-    void navigate({ to: "/auth", search: { mode: next, invite: search.invite }, replace: true });
+    void navigate({ to: "/auth", search: { mode: next, invite: search.invite, ref: search.ref }, replace: true });
   }
 
   function validate(): boolean {
@@ -202,6 +203,7 @@ function AuthPage() {
             fullName: fullName.trim(),
             company: fullName.trim(),
             dialect: "فصحى",
+            referralCode: search.ref,
           },
         });
         if (!res.ok) {

@@ -23,6 +23,21 @@ import { SiteFavicon } from "@/components/app/SiteBadge";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import defaultWorkspace from "@/assets/default-workspace-identity.jpg";
+import { useServerFn } from "@tanstack/react-start";
+import { claimReferral } from "@/lib/referral.functions";
+
+function ReferralClaimer() {
+  const claim = useServerFn(claimReferral);
+  useEffect(() => {
+    let code = "";
+    try { code = window.localStorage.getItem("sahl:referral-code") ?? ""; } catch { return; }
+    if (!code) return;
+    void claim({ data: { code } }).finally(() => {
+      try { window.localStorage.removeItem("sahl:referral-code"); } catch { /* Storage is optional. */ }
+    });
+  }, [claim]);
+  return null;
+}
 
 function WorkspaceCard() {
   const { data: workspace } = useWorkspace();
@@ -420,6 +435,7 @@ function AppShellFrame({ title, lead, actions, children, padded, compactTitle, h
         railExpanded && "is-rail-expanded",
       )}
     >
+      <ReferralClaimer />
       <div className="sahl-smoke sahl-smoke-app" aria-hidden="true">
         <i />
         <i />

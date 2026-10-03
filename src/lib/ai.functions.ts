@@ -833,12 +833,14 @@ export async function runEmployeeTurn(
     let teamBlock = "";
     let speakerFirstName = ownerFirstName;
     if (isTeamProject) {
-      const { data: members } = await supabase
+      // Names only; access to this workspace was verified before the turn started.
+      const { supabaseAdmin: teamReader } = await import("@/integrations/supabase/client.server");
+      const { data: members } = await teamReader
         .from("workspace_members")
         .select("user_id")
         .eq("workspace_id", data.workspaceId);
       const ids = [workspace.owner_id, ...(members ?? []).map((m) => m.user_id)];
-      const { data: people } = await supabase.from("profiles").select("id, full_name").in("id", ids);
+      const { data: people } = await teamReader.from("profiles").select("id, full_name").in("id", ids);
       const names = (people ?? []).map((p) => (p.full_name ?? "").trim()).filter(Boolean);
       speakerFirstName = (context.senderName ?? "").trim().split(/\s+/)[0] || ownerFirstName;
       teamBlock = [

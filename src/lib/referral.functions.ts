@@ -1,4 +1,3 @@
-import { randomBytes } from "node:crypto";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
@@ -46,7 +45,7 @@ async function getOrCreateAccount(admin: any, userId: string): Promise<ReferralA
   if (current) return current as ReferralAccount;
 
   for (let attempt = 0; attempt < 4; attempt += 1) {
-    const code = `SAHL${randomBytes(4).toString("hex").toUpperCase()}`;
+    const code = `SAHL${crypto.randomUUID().replaceAll("-", "").slice(0, 8).toUpperCase()}`;
     const { data, error } = await admin
       .from("referral_accounts")
       .insert({ user_id: userId, code })

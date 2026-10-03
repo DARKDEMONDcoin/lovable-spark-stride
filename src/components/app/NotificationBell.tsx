@@ -1,7 +1,7 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { AtSign, Bell, Check, CheckCircle2, ClipboardList, MessageSquare, Shield, Sparkles, UserCheck, UserX, X } from "lucide-react";
+import { AtSign, Bell, CalendarClock, Check, CheckCircle2, ClipboardList, MessageSquare, Shield, Sparkles, UserCheck, UserX, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,7 @@ import { PersonAvatar } from "@/components/app/PersonAvatar";
 import { cn } from "@/lib/utils";
 
 const when = (iso: string) => new Date(iso).toLocaleString("ar", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
-const KIND_ICON: Record<string, LucideIcon> = { invite_declined: UserX, invite_accepted: UserCheck, task_assigned: ClipboardList, comment: MessageSquare, mention: AtSign, ai_done: Sparkles, task_done: CheckCircle2, role_changed: Shield };
+const KIND_ICON: Record<string, LucideIcon> = { invite_declined: UserX, invite_accepted: UserCheck, task_assigned: ClipboardList, comment: MessageSquare, mention: AtSign, ai_done: Sparkles, task_done: CheckCircle2, role_changed: Shield, task_due: CalendarClock };
 
 /** جرس الإشعارات: دعوات مساحات العمل (قبول/رفض) وردود المدعوين. */
 export function NotificationBell() {

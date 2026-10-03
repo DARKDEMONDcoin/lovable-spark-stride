@@ -361,6 +361,47 @@ export type Database = {
           },
         ]
       }
+      collaboration_attachments: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          path: string
+          size: number
+          task_id: string
+          uploaded_by: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          path: string
+          size?: number
+          task_id: string
+          uploaded_by: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          path?: string
+          size?: number
+          task_id?: string
+          uploaded_by?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "collaboration_attachments_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "collaboration_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       collaboration_comments: {
         Row: {
           author_id: string

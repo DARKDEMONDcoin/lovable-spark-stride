@@ -38,3 +38,4 @@
 - Team workspace = real human members (invite-bound) sharing projects/tasks; tasks may also be assigned to one digital employee run via `collab-ai.functions.ts`, and activity is written only by DB triggers. Why: shared human+AI board without exposing owner-private data.
 - Team spaces share employee chats: stream route verifies membership, runs turn via admin client; messages store sender. Why: shared human+AI threads.
 - Invitees accept/decline in the AppShell NotificationBell (`invite-inbox.functions.ts`); inviters get a `user_notifications` row. Why: no reliance on copied links.
+- Project spaces (workspaces.kind='project') run employee turns with a team block naming members and the current sender; the stream route passes the verified client and sender. Why: project chats speak to the team, not one person.

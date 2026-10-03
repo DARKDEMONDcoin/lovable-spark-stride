@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft, Check, CheckCircle2, Clock3, Copy, DollarSign, Gift, Link2, Loader2, MousePointerClick, Share2, Sparkles, TrendingUp, UserCheck, Users, WalletCards } from "lucide-react";
+import { motion } from "motion/react";
+import { ArrowLeft, Check, CheckCircle2, Clock3, Coins, Copy, Crown, DollarSign, Gift, Link2, Loader2, MousePointerClick, Scale, Share2, Sparkles, TrendingUp, UserCheck, Users, WalletCards, Zap } from "lucide-react";
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/app/AppShell";
@@ -44,6 +45,16 @@ const referralStatuses: Record<string, { label: string; className: string }> = {
 
 function money(cents: number) {
   return new Intl.NumberFormat("ar", { style: "currency", currency: "USD", maximumFractionDigits: 2 }).format(cents / 100);
+}
+
+function WealthOrbit() {
+  const coins = ["$", "٪", "+", "$", "↑", "٪"];
+  return <div className="relative mx-auto aspect-square w-full max-w-72" aria-hidden="true">
+    <motion.div className="absolute inset-[12%] rounded-full border border-gold/25" animate={{ rotate: 360 }} transition={{ duration: 28, repeat: Infinity, ease: "linear" }}>
+      {coins.map((coin, index) => <motion.span key={`${coin}-${index}`} className="absolute grid size-10 place-items-center rounded-full border border-gold/30 bg-gold-soft font-display text-lg font-black text-gold-deep shadow-card first:left-1/2 first:top-0 first:-translate-x-1/2 [&:nth-child(2)]:right-0 [&:nth-child(2)]:top-1/3 [&:nth-child(3)]:bottom-0 [&:nth-child(3)]:right-1/4 [&:nth-child(4)]:bottom-3 [&:nth-child(4)]:left-2 [&:nth-child(5)]:left-0 [&:nth-child(5)]:top-1/3 [&:nth-child(6)]:right-4 [&:nth-child(6)]:top-3" animate={{ rotate: -360 }} transition={{ duration: 28, repeat: Infinity, ease: "linear" }}>{coin}</motion.span>)}
+    </motion.div>
+    <motion.div className="absolute inset-[29%] grid place-items-center rounded-full border border-primary-foreground/15 bg-card text-foreground shadow-lift" animate={{ y: [0, -7, 0] }} transition={{ duration: 3.8, repeat: Infinity, ease: "easeInOut" }}><div className="text-center"><Crown className="mx-auto size-8 text-gold" /><strong className="mt-1 block font-display text-4xl font-black">٥٠٪</strong><span className="text-[0.65rem] font-black text-muted-foreground">أعلى عمولة</span></div></motion.div>
+  </div>;
 }
 
 function ReferralPage() {
@@ -92,20 +103,28 @@ function ReferralPage() {
 
   return <AppShell title="شارك واربح" lead="حوّل توصيتك إلى دخل واضح ومستمر">
     {query.isLoading ? <div className="grid min-h-[50vh] place-items-center"><Loader2 className="size-7 animate-spin text-primary" /></div> : query.isError || !dashboard ? <div className="border-t border-border py-12"><h2 className="font-display text-xl font-black">تعذّر تحميل لوحة الإحالة</h2><Button className="mt-5" onClick={() => void query.refetch()}>حاول مرة أخرى</Button></div> : <div className="space-y-8 pb-12">
-      <section className="relative overflow-hidden rounded-lg bg-ink px-5 py-7 text-primary-foreground sm:px-8 sm:py-9">
-        <div className="relative z-10 grid gap-8 lg:grid-cols-[1fr_20rem] lg:items-end">
+      <section className="relative overflow-hidden rounded-lg bg-ink px-5 py-8 text-primary-foreground sm:px-9 sm:py-10">
+        <motion.div className="absolute inset-x-0 bottom-0 h-px bg-gold" animate={{ scaleX: [0.15, 1, 0.15], opacity: [0.3, 1, 0.3] }} transition={{ duration: 5, repeat: Infinity }} aria-hidden="true" />
+        <div className="relative z-10 grid gap-6 lg:grid-cols-[1fr_18rem] lg:items-center">
           <div>
-            <p className="flex items-center gap-2 text-sm font-black text-gold"><Sparkles className="size-4" /> برنامج شركاء سهل</p>
-            <h2 className="mt-3 max-w-2xl font-display text-3xl font-black leading-tight sm:text-4xl">أنت توصي بمن تثق بهم، ونحن نكافئك حتى ٥٠٪.</h2>
-            <p className="mt-3 max-w-xl text-sm leading-7 text-primary-foreground/70">عمولتك تُحتسب من المدفوعات المؤكدة لعملائك المحالين. كل رقم وحالة وموعد مراجعة ظاهر لك بوضوح.</p>
+            <motion.p initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-2 text-sm font-black text-gold"><Sparkles className="size-4" /> نادي شركاء سهل</motion.p>
+            <motion.h2 initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: .08 }} className="mt-3 max-w-3xl font-display text-3xl font-black leading-tight sm:text-5xl">كل ترشيح صادق يمكن أن يبني لك دخلاً يتكرر.</motion.h2>
+            <p className="mt-4 max-w-xl text-sm leading-7 text-primary-foreground/70">شارك سهل مع أصحاب الأعمال الذين تثق بهم، واربح من مدفوعاتهم المؤكدة بنسبة تبدأ من ٢٠٪ وتصل إلى ٥٠٪.</p>
+            <div className="mt-6 flex flex-wrap gap-2 text-xs font-black"><span className="rounded-full border border-primary-foreground/15 px-3 py-1.5"><Zap className="me-1 inline size-3.5 text-gold" /> تتبع لحظي</span><span className="rounded-full border border-primary-foreground/15 px-3 py-1.5"><CheckCircle2 className="me-1 inline size-3.5 text-jade" /> مدفوعات موثقة</span><span className="rounded-full border border-primary-foreground/15 px-3 py-1.5"><Scale className="me-1 inline size-3.5 text-gold" /> شروط شفافة</span></div>
           </div>
-          <div className="border-r-2 border-gold pr-5"><p className="text-xs font-bold text-primary-foreground/60">عمولتك الحالية</p><p className="mt-1 font-display text-5xl font-black text-gold">{dashboard.rate.toLocaleString("ar")}٪</p><p className="mt-2 text-xs text-primary-foreground/70">مستوى {currentLevel.name}</p></div>
+          <WealthOrbit />
         </div>
       </section>
 
+      <section className="grid gap-px overflow-hidden rounded-lg border border-border bg-border sm:grid-cols-3" aria-label="حالة أرباحك">
+        <div className="bg-card p-5"><p className="text-xs font-black text-muted-foreground">عمولتك الآن</p><p className="mt-2 font-display text-4xl font-black text-primary">{dashboard.rate.toLocaleString("ar")}٪</p><p className="mt-1 text-xs text-muted-foreground">مستوى {currentLevel.name}</p></div>
+        <div className="bg-card p-5"><p className="text-xs font-black text-muted-foreground">إجمالي ما كسبته</p><p className="mt-2 font-display text-4xl font-black">{money(dashboard.totals.earned)}</p><p className="mt-1 text-xs text-muted-foreground">من مدفوعات مؤكدة فقط</p></div>
+        <div className="relative overflow-hidden bg-gold-soft p-5"><Coins className="absolute -bottom-3 -left-3 size-24 text-gold/15" /><p className="relative text-xs font-black text-gold-deep">الرصيد الجاهز للسحب</p><p className="relative mt-2 font-display text-4xl font-black text-gold-deep">{money(dashboard.totals.available)}</p><p className="relative mt-1 text-xs text-gold-deep/70">الحد الأدنى ٥٠ دولاراً</p></div>
+      </section>
+
       <section aria-labelledby="share-title">
-        <div className="mb-4"><h2 id="share-title" className="font-display text-xl font-black">رابطك الشخصي</h2><p className="mt-1 text-sm text-muted-foreground">شاركه مع من سيستفيد فعلاً من سهل.</p></div>
-        <div className="flex flex-col gap-3 border-y border-border py-5 sm:flex-row">
+        <div className="mb-4 flex items-end justify-between gap-4"><div><h2 id="share-title" className="font-display text-xl font-black">أرسل أول دعوة الآن</h2><p className="mt-1 text-sm text-muted-foreground">اختر شخصاً سيستفيد فعلاً؛ الثقة تحوّل أفضل من الإرسال العشوائي.</p></div><Gift className="size-6 text-primary" /></div>
+        <div className="flex flex-col gap-3 rounded-lg border border-border bg-secondary/30 p-4 sm:flex-row">
           <div className="flex min-w-0 flex-1 items-center gap-3 rounded-md border border-border bg-secondary/40 px-4 py-3" dir="ltr"><Link2 className="size-4 shrink-0 text-primary" /><code className="min-w-0 flex-1 truncate text-xs font-bold sm:text-sm">{referralUrl}</code></div>
           <Button variant="outline" className="h-12 font-black" onClick={copyLink}><Copy /> نسخ</Button>
           <Button className="h-12 font-black" onClick={() => void shareLink()}><Share2 /> مشاركة الرابط</Button>
@@ -113,7 +132,7 @@ function ReferralPage() {
       </section>
 
       <section className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-border bg-border lg:grid-cols-4" aria-label="ملخص الإحالات">
-        {stats.map((stat) => <div key={stat.label} className="bg-card p-4 sm:p-5"><stat.icon className="size-5 text-primary" /><p className="mt-5 font-display text-2xl font-black sm:text-3xl">{stat.value}</p><p className="mt-1 text-xs font-bold text-muted-foreground">{stat.label}</p></div>)}
+        {stats.map((stat, index) => <motion.div key={stat.label} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * .06 }} className="bg-card p-4 sm:p-5"><stat.icon className="size-5 text-primary" /><p className="mt-5 font-display text-2xl font-black sm:text-3xl">{stat.value}</p><p className="mt-1 text-xs font-bold text-muted-foreground">{stat.label}</p></motion.div>)}
       </section>
 
       <section className="grid gap-6 lg:grid-cols-[1.25fr_.75fr]">
@@ -141,6 +160,7 @@ function ReferralPage() {
       <section className="grid gap-4 border-t border-border pt-6 sm:grid-cols-3">
         {[{ icon: DollarSign, title: "عمولة على المدفوع", text: "تُحتسب العمولة فقط بعد دفع العميل فعلياً، وليست على مجرد التسجيل." }, { icon: Clock3, title: "مراجعة ٣٠ يوماً", text: "تبقى العمولة معلّقة خلال فترة الاسترداد، ثم تنتقل إلى رصيدك المتاح." }, { icon: CheckCircle2, title: "أرقام قابلة للتدقيق", text: "الاسترداد أو إلغاء الدفع يعكس العمولة تلقائياً ويحفظ السبب في السجل." }].map((item) => <article key={item.title} className="border-r-2 border-border pr-4"><item.icon className="size-5 text-primary" /><h3 className="mt-3 text-sm font-black">{item.title}</h3><p className="mt-1 text-xs leading-6 text-muted-foreground">{item.text}</p></article>)}
       </section>
+      <section className="flex flex-col items-start justify-between gap-4 rounded-lg border border-border bg-secondary/40 p-5 sm:flex-row sm:items-center"><div><h2 className="font-display text-lg font-black">أرباح واضحة، بلا مفاجآت</h2><p className="mt-1 text-xs leading-6 text-muted-foreground">راجع قواعد احتساب العمولة، الاسترداد، السحب والترويج المسموح قبل المشاركة.</p></div><Button asChild variant="outline" className="shrink-0 font-black"><Link to="/referral-terms"><Scale /> شروط برنامج الإحالة</Link></Button></section>
     </div>}
 
     <Dialog open={withdrawOpen} onOpenChange={setWithdrawOpen}>

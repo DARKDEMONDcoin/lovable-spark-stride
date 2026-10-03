@@ -95,7 +95,7 @@ export const runEmployeeAction = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    const admin = await assertWorkspaceAccess(context.supabase, data.workspaceId, context.userId);
+    const admin = await assertOwner(context.supabase, data.workspaceId);
     const { runEmployeeActionServer } = await import("./employee-actions.server");
     const res = await runEmployeeActionServer(admin, {
       workspaceId: data.workspaceId,
@@ -134,7 +134,7 @@ export const runBrowserTask = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    const admin = await assertOwner(context.supabase, data.workspaceId);
+    const admin = await assertWorkspaceAccess(context.supabase, data.workspaceId, context.userId);
     const { enforceEmployeePolicy, recordAudit } = await import("./employee-policy.server");
     const employeeId = data.employeeId ?? "eva";
     await enforceEmployeePolicy(admin, data.workspaceId, employeeId, `${employeeId}-browser-task`);

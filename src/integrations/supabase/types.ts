@@ -2284,10 +2284,52 @@ export type Database = {
           },
         ]
       }
+      user_notifications: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          kind: string
+          read_at: string | null
+          title: string
+          user_id: string
+          workspace_id: string | null
+        }
+        Insert: {
+          body?: string
+          created_at?: string
+          id?: string
+          kind: string
+          read_at?: string | null
+          title: string
+          user_id: string
+          workspace_id?: string | null
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          read_at?: string | null
+          title?: string
+          user_id?: string
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_notifications_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workspace_invitations: {
         Row: {
           accepted_at: string | null
           created_at: string
+          declined_at: string | null
           email: string
           expires_at: string
           id: string
@@ -2301,6 +2343,7 @@ export type Database = {
         Insert: {
           accepted_at?: string | null
           created_at?: string
+          declined_at?: string | null
           email: string
           expires_at?: string
           id?: string
@@ -2314,6 +2357,7 @@ export type Database = {
         Update: {
           accepted_at?: string | null
           created_at?: string
+          declined_at?: string | null
           email?: string
           expires_at?: string
           id?: string

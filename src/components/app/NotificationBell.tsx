@@ -1,7 +1,8 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Bell, Check, UserCheck, UserX, X } from "lucide-react";
+import { AtSign, Bell, Check, CheckCircle2, ClipboardList, MessageSquare, Shield, Sparkles, UserCheck, UserX, X } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -10,6 +11,7 @@ import { PersonAvatar } from "@/components/app/PersonAvatar";
 import { cn } from "@/lib/utils";
 
 const when = (iso: string) => new Date(iso).toLocaleString("ar", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
+const KIND_ICON: Record<string, LucideIcon> = { invite_declined: UserX, invite_accepted: UserCheck, task_assigned: ClipboardList, comment: MessageSquare, mention: AtSign, ai_done: Sparkles, task_done: CheckCircle2, role_changed: Shield };
 
 /** جرس الإشعارات: دعوات مساحات العمل (قبول/رفض) وردود المدعوين. */
 export function NotificationBell() {
@@ -71,7 +73,7 @@ export function NotificationBell() {
               {notes.map((n) => (
                 <li key={n.id} className={cn("flex gap-3 px-4 py-3.5", !n.read_at && "bg-secondary/60")}>
                   <span className={cn("grid size-9 shrink-0 place-items-center rounded-full", n.kind === "invite_declined" ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary")}>
-                    {n.kind === "invite_declined" ? <UserX className="size-4" /> : <UserCheck className="size-4" />}
+                    {(() => { const Icon = KIND_ICON[n.kind] ?? UserCheck; return <Icon className="size-4" />; })()}
                   </span>
                   <button type="button" className="min-w-0 flex-1 text-start" onClick={() => n.workspace_id && navigate({ to: "/app/workspace", search: { workspaceId: n.workspace_id } })}>
                     <p className="text-sm font-bold leading-6">{n.title}</p>

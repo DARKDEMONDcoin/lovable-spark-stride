@@ -2,11 +2,11 @@ import { useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { Check, ChevronsUpDown, ImagePlus, Loader2, Plus, User, Users, X } from "lucide-react";
+import { Check, ChevronsUpDown, ImagePlus, Loader2, Pencil, Plus, User, Users, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
-import { createProjectSpace } from "@/lib/collaboration.functions";
+import { createProjectSpace, updateSpaceIdentity } from "@/lib/collaboration.functions";
 import { setChatSpace, useChatSpaces, useChatWorkspace } from "@/lib/data";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -33,6 +33,7 @@ export function SpaceSwitcher({ collapsed = false }: { collapsed?: boolean }) {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [editing, setEditing] = useState(false);
   const list = (spaces ?? []) as Space[];
   const current = list.find((s) => s.id === active?.id) ?? list[0];
 
@@ -78,13 +79,75 @@ export function SpaceSwitcher({ collapsed = false }: { collapsed?: boolean }) {
               </button>
             ))}
           </div>
+          {current?.kind === "project" && current.owned && (
+            <Button type="button" variant="ghost" className="mt-2 w-full gap-2" onClick={() => { setOpen(false); setEditing(true); }}>
+              <Pencil className="size-4" /> تعديل اسم وصورة المشروع
+            </Button>
+          )}
           <Button type="button" variant="outline" className="mt-2 w-full gap-2" onClick={() => { setOpen(false); setCreating(true); }}>
             <Plus className="size-4" /> مشروع جديد
           </Button>
         </PopoverContent>
       </Popover>
       <CreateProjectDialog open={creating} onOpenChange={setCreating} onCreated={switchTo} />
+      {current && editing && <EditProjectDialog space={current} onClose={() => setEditing(false)} />}
     </>
+  );
+}
+
+function EditProjectDialog({ space, onClose }: { space: Space; onClose: () => void }) {
+  const update = useServerFn(updateSpaceIdentity);
+  const qc = useQueryClient();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [name, setName] = useState(space.name);
+  const [file, setFile] = useState<File | null>(null);
+  const [busy, setBusy] = useState(false);
+  const preview = file ? URL.createObjectURL(file) : space.logo;
+
+  const save = async () => {
+    if (name.trim().length < 2) { toast.error("اكتب اسم المشروع"); return; }
+    setBusy(true);
+    try {
+      let logoPath: string | undefined;
+      if (file) {
+        if (file.size > 5 * 1024 * 1024) throw new Error("الصورة أكبر من 5 ميجا");
+        const { data: auth } = await supabase.auth.getUser();
+        const ext = file.name.split(".").pop() || "png";
+        logoPath = `${auth.user!.id}/spaces/${crypto.randomUUID()}.${ext}`;
+        const { error } = await supabase.storage.from("avatars").upload(logoPath, file, { contentType: file.type });
+        if (error) throw new Error("تعذّر رفع الصورة");
+      }
+      await update({ data: { workspaceId: space.id, name: name.trim(), ...(logoPath ? { logoPath } : {}) } });
+      await qc.invalidateQueries();
+      toast.success("اتحفظ التعديل");
+      onClose();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "حصل خطأ");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Dialog open onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DialogContent className="max-w-md" dir="rtl">
+        <DialogTitle className="font-display text-xl font-black">تعديل المشروع</DialogTitle>
+        <div className="flex items-center gap-3">
+          <button type="button" onClick={() => fileRef.current?.click()} aria-label="تغيير صورة المشروع"
+            className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-xl border-2 border-dashed border-border bg-muted hover:border-primary">
+            {preview ? <img src={preview} alt="" className="size-full object-cover" /> : <ImagePlus className="size-6 text-muted-foreground" />}
+          </button>
+          <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+          <div className="flex-1 space-y-1">
+            <label className="text-xs font-bold" htmlFor="pj-edit-name">اسم المشروع</label>
+            <Input id="pj-edit-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={60} />
+          </div>
+        </div>
+        <Button type="button" onClick={save} disabled={busy} className="w-full gap-2">
+          {busy && <Loader2 className="size-4 animate-spin" />} حفظ
+        </Button>
+      </DialogContent>
+    </Dialog>
   );
 }
 

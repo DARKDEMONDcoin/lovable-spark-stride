@@ -298,11 +298,25 @@ export function useMessages(
   employeeId: string,
   conversationId?: string,
 ) {
+  const qc = useQueryClient();
+  const key = ["messages", workspaceId, employeeId, conversationId];
+  // Realtime push for shared threads; polling below stays as a fallback.
+  useEffect(() => {
+    if (!workspaceId || !conversationId) return;
+    const channel = supabase
+      .channel(`msgs:${conversationId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "messages", filter: `conversation_id=eq.${conversationId}` },
+        () => void qc.invalidateQueries({ queryKey: ["messages", workspaceId, employeeId, conversationId] }),
+      )
+      .subscribe();
+    return () => { void supabase.removeChannel(channel); };
+  }, [qc, workspaceId, employeeId, conversationId]);
   return useQuery({
-    queryKey: ["messages", workspaceId, employeeId, conversationId],
+    queryKey: key,
     enabled: !!workspaceId && !!conversationId,
-    // Team spaces share one thread; pick up teammates' messages without a reload.
-    refetchInterval: 10_000,
+    refetchInterval: 30_000,
     queryFn: () =>
       must<Message[]>(
         supabase

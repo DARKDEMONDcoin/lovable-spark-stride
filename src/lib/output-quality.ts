@@ -115,7 +115,9 @@ export function detectKind(request: string, text: string, employeeId: string): O
     return "article";
   if (/(?:تقرير|تحليل الأداء|لوحة مؤشرات|قراءة الأرقام)/.test(ar) || employeeId === "adam")
     return "report";
-  if (/(?:مقترح|عرض سعر|proposal|تسعير)/i.test(ar)) return "proposal";
+  // «مقترح» كصفة («جدول مقترح») لا تجعل الطلب عرض سعر — النوع من الطلب نفسه فقط.
+  if (/(?:عرض سعر|عرض أسعار|proposal|تسعير|مقترح عمل|مقترح مشروع|(?:اكتب|جهّز|جهز|اعمل)\s+(?:لي\s+)?مقترح)/i.test(request))
+    return "proposal";
   if (/(?:خطة|جدول محتوى|رزنامة|roadmap)/i.test(ar)) return "plan";
   if (employeeId === "sonny") return "social";
   return "generic";

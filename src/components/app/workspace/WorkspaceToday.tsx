@@ -18,7 +18,7 @@ export function WorkspaceToday({ tasks, projects, people, meId, ownWorkspaceId, 
   projects: Project[];
   people: Person[];
   meId: string | null | undefined;
-  ownWorkspaceId?: string;
+  ownWorkspaceId?: string | undefined;
   isOwnSpace: boolean;
   onOpenProject: (id: string) => void;
 }) {

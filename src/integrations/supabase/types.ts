@@ -1837,6 +1837,210 @@ export type Database = {
         }
         Relationships: []
       }
+      referral_accounts: {
+        Row: {
+          code: string
+          created_at: string
+          payout_destination: string | null
+          payout_method: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          payout_destination?: string | null
+          payout_method?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          payout_destination?: string | null
+          payout_method?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      referral_attributions: {
+        Row: {
+          attributed_at: string
+          code: string
+          first_paid_at: string | null
+          id: string
+          referred_user_id: string
+          referrer_user_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          attributed_at?: string
+          code: string
+          first_paid_at?: string | null
+          id?: string
+          referred_user_id: string
+          referrer_user_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          attributed_at?: string
+          code?: string
+          first_paid_at?: string | null
+          id?: string
+          referred_user_id?: string
+          referrer_user_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referral_attributions_code_fkey"
+            columns: ["code"]
+            isOneToOne: false
+            referencedRelation: "referral_accounts"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
+      referral_clicks: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          landing_path: string
+          visitor_hash: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          landing_path?: string
+          visitor_hash: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          landing_path?: string
+          visitor_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referral_clicks_code_fkey"
+            columns: ["code"]
+            isOneToOne: false
+            referencedRelation: "referral_accounts"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
+      referral_commissions: {
+        Row: {
+          approved_at: string | null
+          attribution_id: string
+          commission_amount_cents: number
+          commission_rate: number
+          created_at: string
+          currency: string
+          gross_amount_cents: number
+          held_until: string
+          id: string
+          paid_at: string | null
+          payment_reference: string
+          referrer_user_id: string
+          reversal_reason: string | null
+          reversed_at: string | null
+          status: string
+        }
+        Insert: {
+          approved_at?: string | null
+          attribution_id: string
+          commission_amount_cents: number
+          commission_rate: number
+          created_at?: string
+          currency?: string
+          gross_amount_cents: number
+          held_until?: string
+          id?: string
+          paid_at?: string | null
+          payment_reference: string
+          referrer_user_id: string
+          reversal_reason?: string | null
+          reversed_at?: string | null
+          status?: string
+        }
+        Update: {
+          approved_at?: string | null
+          attribution_id?: string
+          commission_amount_cents?: number
+          commission_rate?: number
+          created_at?: string
+          currency?: string
+          gross_amount_cents?: number
+          held_until?: string
+          id?: string
+          paid_at?: string | null
+          payment_reference?: string
+          referrer_user_id?: string
+          reversal_reason?: string | null
+          reversed_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referral_commissions_attribution_id_fkey"
+            columns: ["attribution_id"]
+            isOneToOne: false
+            referencedRelation: "referral_attributions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      referral_payout_requests: {
+        Row: {
+          amount_cents: number
+          currency: string
+          destination: string
+          id: string
+          method: string
+          note: string | null
+          paid_at: string | null
+          requested_at: string
+          reviewed_at: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          amount_cents: number
+          currency?: string
+          destination: string
+          id?: string
+          method: string
+          note?: string | null
+          paid_at?: string | null
+          requested_at?: string
+          reviewed_at?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          amount_cents?: number
+          currency?: string
+          destination?: string
+          id?: string
+          method?: string
+          note?: string | null
+          paid_at?: string | null
+          requested_at?: string
+          reviewed_at?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       serp_cache: {
         Row: {
           cache_key: string
@@ -2566,6 +2770,15 @@ export type Database = {
         Args: { _bucket: string; _identifier: string; _window_seconds: number }
         Returns: number
       }
+      credit_referral_payment: {
+        Args: {
+          _currency?: string
+          _gross_amount_cents: number
+          _payment_reference: string
+          _referred_user_id: string
+        }
+        Returns: string
+      }
       get_shared_output: {
         Args: { _token: string }
         Returns: {
@@ -2587,6 +2800,14 @@ export type Database = {
         }[]
       }
       owns_workspace: { Args: { _workspace_id: string }; Returns: boolean }
+      referral_rate_for_active_count: {
+        Args: { _active_count: number }
+        Returns: number
+      }
+      reverse_referral_payment: {
+        Args: { _payment_reference: string; _reason: string }
+        Returns: boolean
+      }
       transfer_project_ownership: {
         Args: { _caller: string; _new_owner: string; _workspace_id: string }
         Returns: undefined

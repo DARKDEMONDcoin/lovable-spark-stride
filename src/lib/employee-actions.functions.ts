@@ -113,7 +113,14 @@ export const runBrowserTask = createServerFn({ method: "POST" })
     const employeeId = data.employeeId ?? "eva";
     await enforceEmployeePolicy(admin, data.workspaceId, employeeId, `${employeeId}-browser-task`);
     const { runBrowserAgent } = await import("./browser-agent.server");
-    const r = await runBrowserAgent(data);
+    const { getMember } = await import("@/data/team");
+    const employee = getMember(employeeId);
+    const r = await runBrowserAgent({
+      ...data,
+      goal: employee
+        ? `نفّذ بصفتك ${employee.name} (${employee.role}) وركّز على ما يخدم اختصاصك. المطلوب: ${data.goal}`
+        : data.goal,
+    });
     await recordAudit(admin, {
       workspaceId: data.workspaceId,
       employeeId,
@@ -141,7 +148,14 @@ export const compareSitesTask = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertOwner(context.supabase, data.workspaceId);
     const { compareSites } = await import("./browser-agent.server");
-    return compareSites({ goal: data.goal, urls: data.urls });
+    const { getMember } = await import("@/data/team");
+    const employee = data.employeeId ? getMember(data.employeeId) : null;
+    return compareSites({
+      goal: employee
+        ? `قارن بصفتك ${employee.name} (${employee.role}) وركّز على ما يخدم اختصاصك. المطلوب: ${data.goal}`
+        : data.goal,
+      urls: data.urls,
+    });
   });
 
 /** تعديل قيم إجراء جاهز بأمر نصي من المالك داخل الشات («خلّي الرد أقصر»، «غيّر الموعد لبكرة»…). */

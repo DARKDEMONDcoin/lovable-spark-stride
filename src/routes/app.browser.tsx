@@ -6,6 +6,8 @@ import { ExternalLink, Globe, Loader2, Plus, ShieldCheck, X } from "lucide-react
 
 import { AppShell } from "@/components/app/AppShell";
 import { Markdown } from "@/components/app/Markdown";
+import { Portrait } from "@/components/site/Portrait";
+import { getMember } from "@/data/team";
 import { useChatWorkspace } from "@/lib/data";
 import { compareSitesTask, runBrowserTask } from "@/lib/employee-actions.functions";
 import { cn } from "@/lib/utils";
@@ -51,6 +53,7 @@ const PURCHASE_INTENT = /اشتر|شراء|احجز|حجز|اطلب|ادفع|buy
 function BrowserPage() {
   const { data: workspace } = useChatWorkspace();
   const { employee } = Route.useSearch();
+  const member = employee ? getMember(employee) : null;
   const runTask = useServerFn(runBrowserTask);
   const runCompare = useServerFn(compareSitesTask);
   const [mode, setMode] = useState<Mode>("task");
@@ -87,6 +90,17 @@ function BrowserPage() {
       title="المتصفح المنفّذ"
       lead={employee ? "يستخدم الموظف المتصفح في حدود اختصاصه، ويعرض لك كل خطوة قبل أي إجراء حساس." : "قارن الخيارات من مواقعها الأصلية، وراجع الأسعار والتفاصيل قبل أن تتخذ قرارك."}
     >
+      {member ? (
+        <div className="mb-5 flex items-center gap-3 border-b border-border pb-4">
+          <span className="block size-11 shrink-0 overflow-hidden rounded-full shadow-sm">
+            <Portrait memberId={member.id} name={member.name} className="size-full" />
+          </span>
+          <div className="min-w-0">
+            <p className="font-bold">متصفح {member.name}</p>
+            <p className="truncate text-xs text-muted-foreground">يبحث وينفّذ بما يخدم اختصاصه: {member.role}</p>
+          </div>
+        </div>
+      ) : null}
       <div className="grid gap-5 lg:grid-cols-[minmax(0,26rem)_1fr]">
         <section className="space-y-4 rounded-3xl border border-border bg-card p-5">
           <div className="grid grid-cols-2 gap-1 rounded-2xl bg-secondary p-1 text-sm font-bold">

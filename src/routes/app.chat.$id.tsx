@@ -86,7 +86,7 @@ import {
   type Aspect,
 } from "@/components/app/MediaStudio";
 
-import { featuredSkillsFor, skillsFor, type Skill } from "@/data/skills";
+import { featuredSkillsFor, type Skill } from "@/data/skills";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Message, MessageContent } from "@/components/ai-elements/message";

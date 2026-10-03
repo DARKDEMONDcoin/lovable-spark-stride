@@ -1,0 +1,136 @@
+import { useState } from "react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { Activity, Check, ClipboardCopy, FolderKanban, Link2, LogOut, Plus, Settings2, Sparkles, Trash2, UserPlus, Users, X } from "lucide-react";
+import { ProjectBoard, EmployeeBadge } from "@/components/app/workspace/ProjectBoard";
+import { getMember } from "@/data/team";
+import { AppShell } from "@/components/app/AppShell";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { supabase } from "@/integrations/supabase/client";
+import { useWorkspace } from "@/lib/data";
+import { inviteHuman, listHumanTeam, listMyHumanSpaces, removeHumanMember, revokeHumanInvite } from "@/lib/collaboration.functions";
+import { cn } from "@/lib/utils";
+import type { Tables } from "@/integrations/supabase/types";
+
+export const Route = createFileRoute("/app/workspace")({
+  validateSearch: (search: Record<string, unknown>) => ({ workspaceId: typeof search["workspaceId"] === "string" ? search["workspaceId"] : undefined }),
+  head: () => ({ meta: [
+    { title: "مساحة عمل الفريق | سهل" },
+    { name: "description", content: "ادعُ زملاءك إلى مساحة العمل وتعاونوا في المشاريع والمهام." },
+    { property: "og:title", content: "مساحة عمل الفريق | سهل" },
+    { property: "og:description", content: "ادعُ زملاءك إلى مساحة العمل وتعاونوا في المشاريع والمهام." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+    { name: "robots", content: "noindex" },
+  ] }),
+  component: WorkspacePage,
+});
+
+type Project = Tables<"collaboration_projects">;
+type WorkItem = Tables<"collaboration_tasks">;
+type Invite = Tables<"workspace_invitations">;
+const inputClass = "h-10 w-full rounded-md border border-border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring";
+
+function WorkspacePage() {
+  const { workspaceId } = Route.useSearch();
+  const navigate = useNavigate();
+  const qc = useQueryClient();
+  const { data: ownWorkspace } = useWorkspace();
+  const listSpaces = useServerFn(listMyHumanSpaces);
+  const spaces = useQuery({ queryKey: ["human-spaces"], queryFn: () => listSpaces() });
+  const [preferredId] = useState(() => { try { return window.localStorage.getItem("sahl:last-workspace") ?? undefined; } catch { return undefined; } });
+  const currentId = workspaceId && (!spaces.data || spaces.data.some((space) => space.id === workspaceId)) ? workspaceId : preferredId && spaces.data?.some((space) => space.id === preferredId) ? preferredId : ownWorkspace?.id ?? spaces.data?.[0]?.id;
+  const loadingWorkspace = spaces.isLoading;
+  const listTeam = useServerFn(listHumanTeam);
+  const invite = useServerFn(inviteHuman);
+  const remove = useServerFn(removeHumanMember);
+  const revoke = useServerFn(revokeHumanInvite);
+  const [view, setView] = useState<"projects" | "activity" | "people" | "settings">("projects");
+  const [spaceName, setSpaceName] = useState("");
+  const [projectOpen, setProjectOpen] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [projectName, setProjectName] = useState("");
+  const [projectDescription, setProjectDescription] = useState("");
+  const [email, setEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState<"admin" | "member">("member");
+  const [inviteUrl, setInviteUrl] = useState("");
+  const [copied, setCopied] = useState(false);
+  const [selectedProject, setSelectedProject] = useState<string | null>(null);
+  const [error, setError] = useState("");
+
+  const humanTeam = useQuery({ queryKey: ["human-team", currentId], enabled: !!currentId,
+    queryFn: () => listTeam({ data: { workspaceId: currentId ?? "" } }) });
+  const projects = useQuery({ queryKey: ["collaboration-projects", currentId], enabled: !!currentId,
+    queryFn: async () => { const { data, error } = await supabase.from("collaboration_projects").select("*").eq("workspace_id", currentId ?? "").order("created_at", { ascending: false }); if (error) throw error; return data as Project[]; } });
+  const tasks = useQuery({ queryKey: ["collaboration-tasks", currentId], enabled: !!currentId, refetchInterval: 15000,
+    queryFn: async () => { const { data, error } = await supabase.from("collaboration_tasks").select("*").eq("workspace_id", currentId ?? "").order("created_at", { ascending: false }); if (error) throw error; return data as WorkItem[]; } });
+  const invitations = useQuery({ queryKey: ["human-invites", currentId], enabled: !!currentId && humanTeam.data?.owner === true,
+    queryFn: async () => { const { data, error } = await supabase.from("workspace_invitations").select("*").eq("workspace_id", currentId ?? "").is("revoked_at", null).is("accepted_at", null).gt("expires_at", new Date().toISOString()).order("created_at", { ascending: false }); if (error) throw error; return data as Invite[]; } });
+  const people = humanTeam.data?.members ?? [];
+  const active = selectedProject ? projects.data?.find((p) => p.id === selectedProject) : undefined;
+    const refresh = () => { void qc.invalidateQueries({ queryKey: ["collaboration-projects", currentId] }); void qc.invalidateQueries({ queryKey: ["collaboration-tasks", currentId] }); void qc.invalidateQueries({ queryKey: ["collaboration-activity", currentId] }); };
+
+  const createProject = useMutation({ mutationFn: async () => {
+    const { data: auth } = await supabase.auth.getUser();
+    if (!auth.user || !currentId) throw new Error("سجّل الدخول أولاً.");
+    const { error } = await supabase.from("collaboration_projects").insert({ workspace_id: currentId, name: projectName.trim(), description: projectDescription.trim(), created_by: auth.user.id });
+    if (error) throw error;
+  }, onSuccess: () => { setProjectOpen(false); setProjectName(""); setProjectDescription(""); refresh(); } });
+  const me = useQuery({ queryKey: ["me-id"], queryFn: async () => (await supabase.auth.getUser()).data.user?.id ?? null });
+  const myRole = people.find((p) => p.userId === me.data)?.role;
+  const canManage = humanTeam.data?.owner === true || myRole === "admin";
+  const activity = useQuery({ queryKey: ["collaboration-activity", currentId], enabled: !!currentId, refetchInterval: 20000,
+    queryFn: async () => { const { data, error } = await supabase.from("collaboration_activity").select("*").eq("workspace_id", currentId ?? "").order("created_at", { ascending: false }).limit(60); if (error) throw error; return data; } });
+  const renameSpace = useMutation({ mutationFn: async () => { const { error } = await supabase.from("workspaces").update({ name: spaceName.trim() }).eq("id", currentId ?? ""); if (error) throw error; },
+    onSuccess: () => { void qc.invalidateQueries({ queryKey: ["human-team", currentId] }); void qc.invalidateQueries({ queryKey: ["human-spaces"] }); } });
+  const leaveSpace = useMutation({ mutationFn: async () => { if (!me.data) throw new Error("سجّل الدخول أولاً."); const { error } = await supabase.from("workspace_members").delete().eq("workspace_id", currentId ?? "").eq("user_id", me.data); if (error) throw error; },
+    onSuccess: () => { try { window.localStorage.removeItem("sahl:last-workspace"); } catch { /* ignore */ } void qc.invalidateQueries({ queryKey: ["human-spaces"] }); void navigate({ to: "/app/workspace", search: { workspaceId: undefined } }); } });
+
+  async function sendInvite() {
+    if (!currentId) return;
+    setError("");
+    try {
+      const result = await invite({ data: { workspaceId: currentId, email: email.trim(), role: inviteRole } });
+      setInviteUrl(`${window.location.origin}/invite?token=${result.token}`);
+      await qc.invalidateQueries({ queryKey: ["human-invites", currentId] });
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "تعذّر إنشاء الدعوة."); }
+  }
+
+  return <AppShell title="مساحة العمل" lead={humanTeam.data?.workspaceName ?? "فريقك الحقيقي ومشاريعك"}>
+    <div dir="rtl" className="mx-auto w-full max-w-6xl pb-16">
+      <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border pb-7">
+        <div className="min-w-0"><p className="text-xs font-bold text-primary">مساحة العمل / {humanTeam.data?.workspaceName ?? "الفريق"}</p><h2 className="mt-2 font-display text-2xl font-black sm:text-3xl">شغلكم، في مكان واحد.</h2><p className="mt-2 text-sm text-muted-foreground">فريقك وموظفوك الرقميون على نفس المشاريع: أسند المهام، دع الموظف ينفّذ، وراجعوا النتائج معاً.</p></div>
+        {humanTeam.data?.owner && <Button onClick={() => { setInviteOpen(true); setInviteUrl(""); setError(""); }} className="gap-2"><UserPlus className="size-4" /> دعوة شخص</Button>}
+      </div>
+      {spaces.data && spaces.data.length > 1 && <div className="mt-5 flex flex-wrap items-center gap-2"><span className="text-xs font-bold text-muted-foreground">المساحة:</span>{spaces.data.map((space) => <Button key={space.id} size="sm" variant={currentId === space.id ? "default" : "outline"} onClick={() => { setSelectedProject(null); void navigate({ to: "/app/workspace", search: { workspaceId: space.id } }); }}>{space.name}</Button>)}</div>}
+      <div className="mt-6 flex gap-1 overflow-x-auto border-b border-border" role="tablist" aria-label="أقسام مساحة العمل">
+        {([{ id: "projects", label: "المشاريع", icon: FolderKanban, count: projects.data?.length ?? 0 }, { id: "activity", label: "النشاط", icon: Activity, count: activity.data?.length ?? 0 }, { id: "people", label: "الأعضاء", icon: Users, count: people.length }, { id: "settings", label: "الإعدادات", icon: Settings2, count: null }] as const).map((tab) => <Button key={tab.id} type="button" role="tab" aria-selected={view === tab.id} variant="ghost" onClick={() => setView(tab.id)} className={cn("h-11 rounded-none border-b-2 px-4", view === tab.id ? "border-primary text-primary" : "border-transparent text-muted-foreground")}><tab.icon className="size-4" />{tab.label}{tab.count !== null && <span className="text-xs opacity-60">{tab.count}</span>}</Button>)}
+      </div>
+      {(projects.error || tasks.error || humanTeam.error) && <p role="alert" className="mt-5 text-sm text-destructive">تعذّر تحميل مساحة العمل. أعد فتح الصفحة للمحاولة.</p>}
+      {view === "projects" && active && currentId ? <ProjectBoard project={active} tasks={(tasks.data ?? []).filter((t) => t.project_id === active.id)} people={people} canManage={canManage} workspaceId={currentId} onBack={() => setSelectedProject(null)} onChanged={refresh} /> : view === "projects" ? <section className="mt-7" aria-label="المشاريع">
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3"><div><h3 className="font-display text-xl font-black">المشاريع</h3><p className="mt-1 text-sm text-muted-foreground">افتح مشروعاً لترى لوحة مهامه، وأسند المهام لزملائك أو لموظفيك الرقميين.</p></div>{canManage && <Button size="sm" onClick={() => setProjectOpen(true)}><Plus className="size-4" /> مشروع جديد</Button>}</div>
+        {loadingWorkspace || projects.isLoading ? <p role="status" className="py-14 text-center text-sm text-muted-foreground">جارٍ تحميل المشاريع…</p> : !projects.data?.length ? <div className="border-y border-border py-16 text-center"><FolderKanban className="mx-auto size-9 text-primary" /><h4 className="mt-4 font-display text-xl font-black">أول مشروع يبدأ هنا</h4><p className="mt-2 text-sm text-muted-foreground">اجمع أعمال فريقك البشري في مشروع، ثم أضف المهام ووزّعها عليهم.</p>{canManage && <Button className="mt-5" onClick={() => setProjectOpen(true)}><Plus className="size-4" /> إنشاء مشروع</Button>}</div> : <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{projects.data.map((project) => <Button key={project.id} type="button" variant="outline" onClick={() => setSelectedProject(project.id)} className="group h-auto min-h-40 w-full flex-col items-stretch justify-start rounded-md p-5 text-start whitespace-normal hover:border-primary"><div className="flex items-start justify-between gap-3"><span className="grid size-10 place-items-center rounded-md bg-primary/10 text-primary"><FolderKanban className="size-5" /></span><span className={cn("text-xs font-bold", project.status === "completed" ? "text-jade-deep" : "text-muted-foreground")}>{project.status === "completed" ? "مكتمل" : project.status === "paused" ? "متوقف" : "نشط"}</span></div><span className="mt-4 block break-words font-display text-lg font-black">{project.name}</span><span className="mt-1 block line-clamp-2 text-xs font-normal text-muted-foreground">{project.description || "مشروع الفريق"}</span>{(() => { const list = (tasks.data ?? []).filter((task) => task.project_id === project.id); const doneCount = list.filter((t) => t.status === "done").length; const ai = list.filter((t) => t.ai_employee_id).length; return <span className="mt-auto block pt-4"><span className="flex justify-between text-xs text-muted-foreground"><span>{doneCount}/{list.length} مكتملة</span>{ai > 0 && <span className="inline-flex items-center gap-1 text-primary"><Sparkles className="size-3" />{ai} مع موظفين رقميين</span>}</span><span className="mt-2 block h-1 overflow-hidden rounded-full bg-secondary"><span className="block h-full bg-primary" style={{ width: `${list.length ? Math.round((doneCount / list.length) * 100) : 0}%` }} /></span></span>; })()}</Button>)}</div>}
+      </section> : view === "activity" ? <section className="mt-7" aria-label="النشاط">
+        <h3 className="font-display text-xl font-black">ما الذي حدث مؤخراً</h3><p className="mt-1 text-sm text-muted-foreground">كل تحرك في المشاريع — من الفريق ومن الموظفين الرقميين — يظهر هنا تلقائياً.</p>
+        {activity.isLoading ? <p role="status" className="py-10 text-center text-sm text-muted-foreground">جارٍ التحميل…</p> : !activity.data?.length ? <p className="mt-6 border-y border-border py-12 text-center text-sm text-muted-foreground">لا نشاط بعد. أنشئ مشروعاً أو مهمة لتبدأ القصة.</p> : <ol className="mt-5 divide-y divide-border border-y border-border">{activity.data.map((item) => { const actor = people.find((p) => p.userId === item.actor_id)?.name ?? "عضو"; const emp = item.employee_id ? getMember(item.employee_id)?.name : null; const project = projects.data?.find((p) => p.id === item.project_id); const verb: Record<string, string> = { project_created: `أنشأ ${actor} مشروعاً`, project_completed: `أنهى ${actor} المشروع`, project_active: `أعاد ${actor} فتح المشروع`, task_created: `أضاف ${actor} مهمة`, output_shared: `أرسل ${actor} مخرجاً من محادثة ${emp ?? "موظف"}`, ai_assigned: `أسند ${actor} إلى ${emp ?? "موظف رقمي"} مهمة`, ai_done: `أنجز ${emp ?? "الموظف الرقمي"} مهمة`, task_todo: `أعاد ${actor} مهمة إلى «للعمل»`, task_in_progress: `بدأ ${actor} العمل على`, task_done: `أكمل ${actor} مهمة` }; return <li key={item.id} className="flex items-start gap-3 py-3.5"><span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-full bg-secondary text-xs font-bold text-primary">{item.kind === "ai_done" && item.employee_id ? <Sparkles className="size-4" /> : actor.slice(0, 1)}</span><div className="min-w-0 flex-1 text-sm"><p className="break-words"><span className="text-muted-foreground">{verb[item.kind] ?? actor}</span> <button type="button" className="font-bold hover:text-primary" onClick={() => { if (item.project_id) { setSelectedProject(item.project_id); setView("projects"); } }}>«{item.summary}»</button>{project && !item.kind.startsWith("project") ? <span className="text-muted-foreground"> في {project.name}</span> : null}</p><p className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">{new Date(item.created_at).toLocaleString("ar", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}{item.employee_id && <EmployeeBadge id={item.employee_id} />}</p></div></li>; })}</ol>}
+      </section> : view === "settings" ? <section className="mt-7 max-w-xl space-y-8" aria-label="الإعدادات">
+        {humanTeam.data?.owner ? <form onSubmit={(e) => { e.preventDefault(); renameSpace.mutate(); }} className="space-y-3"><h3 className="font-display text-xl font-black">اسم المساحة</h3><p className="text-sm text-muted-foreground">يظهر لكل أعضاء الفريق في مبدّل المساحات.</p><div className="flex gap-2"><input value={spaceName || humanTeam.data?.workspaceName || ""} onChange={(e) => setSpaceName(e.target.value)} minLength={2} maxLength={80} aria-label="اسم المساحة" className={inputClass} /><Button type="submit" disabled={renameSpace.isPending || spaceName.trim().length < 2}>{renameSpace.isSuccess && !renameSpace.isPending ? <Check className="size-4" /> : null}حفظ</Button></div>{renameSpace.error && <p role="alert" className="text-sm text-destructive">{renameSpace.error.message}</p>}</form>
+        : <div className="space-y-3"><h3 className="font-display text-xl font-black">مغادرة المساحة</h3><p className="text-sm text-muted-foreground">ستفقد الوصول لمشاريع ومهام «{humanTeam.data?.workspaceName}». يمكن للمالك دعوتك مجدداً لاحقاً.</p><Button variant="outline" className="gap-2 text-destructive" disabled={leaveSpace.isPending} onClick={() => { if (window.confirm("مغادرة مساحة العمل؟")) leaveSpace.mutate(); }}><LogOut className="size-4" /> غادر المساحة</Button>{leaveSpace.error && <p role="alert" className="text-sm text-destructive">{leaveSpace.error.message}</p>}</div>}
+        <div className="rounded-md border border-border p-4 text-sm leading-7 text-muted-foreground"><p className="font-bold text-foreground">الأدوار</p><p><b>المالك:</b> كل شيء، بما فيه الدعوات والإعدادات.</p><p><b>مدير المشاريع:</b> ينشئ المشاريع ويديرها، ويسند المهام للفريق وللموظفين الرقميين.</p><p><b>العضو:</b> يضيف المهام ويحدّثها ويشغّل الموظفين الرقميين عليها.</p><p className="mt-2 text-xs">لا يصل أي عضو إلى محادثاتك الخاصة أو حساباتك المتصلة.</p></div>
+      </section> : <section className="mt-7" aria-label="الأعضاء">
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3"><div><h3 className="font-display text-xl font-black">الأشخاص في المساحة</h3><p className="mt-1 text-sm text-muted-foreground">لكل شخص حسابه الخاص؛ الدعوة لا تمنح وصولاً لمحادثاتك أو حساباتك المتصلة.</p></div>{humanTeam.data?.owner && <Button variant="outline" size="sm" onClick={() => { setInviteOpen(true); setInviteUrl(""); setError(""); }}><UserPlus className="size-4" /> دعوة شخص</Button>}</div>
+        <div className="divide-y divide-border border-y border-border">{people.map((person) => <div key={person.userId} className="flex min-w-0 items-center gap-3 py-4"><span className="grid size-10 shrink-0 place-items-center rounded-full bg-secondary font-bold text-primary">{person.name.slice(0, 1)}</span><div className="min-w-0 flex-1"><p className="truncate text-sm font-bold">{person.name}</p><p className="text-xs text-muted-foreground">{person.role === "owner" ? "مالك المساحة" : person.role === "admin" ? "مدير مشاريع" : "عضو"}</p></div>{humanTeam.data?.owner && person.role !== "owner" && <Button size="icon" variant="ghost" aria-label={`إزالة ${person.name}`} title="إزالة من المساحة" onClick={async () => { if (!currentId || !window.confirm(`إزالة ${person.name} من مساحة العمل؟`)) return; try { await remove({ data: { workspaceId: currentId, userId: person.userId } }); await qc.invalidateQueries({ queryKey: ["human-team", currentId] }); refresh(); } catch (cause) { setError(cause instanceof Error ? cause.message : "تعذّرت الإزالة."); } }}><Trash2 className="size-4" /></Button>}</div>)}</div>
+        {humanTeam.data?.owner && Boolean(invitations.data?.length) && <div className="mt-8"><h4 className="mb-3 text-sm font-bold">دعوات بانتظار القبول</h4><div className="divide-y divide-border border-y border-border">{invitations.data?.map((entry) => <div key={entry.id} className="flex min-w-0 items-center gap-3 py-3 text-sm"><span className="min-w-0 flex-1 truncate" dir="ltr">{entry.email}</span><span className="text-xs text-muted-foreground">{entry.role === "admin" ? "مدير مشاريع" : "عضو"}</span><Button variant="ghost" size="icon" title="إلغاء الدعوة" aria-label={`إلغاء دعوة ${entry.email}`} onClick={async () => { if (!currentId) return; try { await revoke({ data: { workspaceId: currentId, invitationId: entry.id } }); await qc.invalidateQueries({ queryKey: ["human-invites", currentId] }); } catch (cause) { setError(cause instanceof Error ? cause.message : "تعذّر إلغاء الدعوة."); } }}><X className="size-4" /></Button></div>)}</div></div>}
+        {error && <p role="alert" className="mt-3 text-sm text-destructive">{error}</p>}
+      </section>}
+    </div>
+
+    <Dialog open={projectOpen} onOpenChange={setProjectOpen}><DialogContent dir="rtl" className="w-[min(94vw,30rem)] max-w-none rounded-md"><DialogTitle>مشروع جديد</DialogTitle><DialogDescription>اجمع عمل الأشخاص الحقيقيين في مكان واحد.</DialogDescription><form onSubmit={(event) => { event.preventDefault(); createProject.mutate(); }} className="space-y-4"><label className="block text-sm font-bold">اسم المشروع<input required minLength={2} maxLength={120} value={projectName} onChange={(event) => setProjectName(event.target.value)} placeholder="مثلاً: إطلاق المتجر" className={cn(inputClass, "mt-2")} /></label><label className="block text-sm font-bold">وصف مختصر<textarea value={projectDescription} onChange={(event) => setProjectDescription(event.target.value)} rows={3} maxLength={1000} className="mt-2 w-full rounded-md border border-border bg-background p-3 text-sm" /></label><Button type="submit" disabled={createProject.isPending || projectName.trim().length < 2}>{createProject.isPending ? "جارٍ الإنشاء…" : "إنشاء المشروع"}</Button>{createProject.error && <p role="alert" className="text-sm text-destructive">{createProject.error.message}</p>}</form></DialogContent></Dialog>
+
+    <Dialog open={inviteOpen} onOpenChange={(open) => { setInviteOpen(open); if (!open) { setInviteUrl(""); setCopied(false); } }}><DialogContent dir="rtl" className="w-[min(94vw,32rem)] max-w-none rounded-md"><DialogTitle>دعوة شخص إلى الفريق</DialogTitle><DialogDescription>أنشئ رابطاً خاصاً ثم أرسله بنفسك إلى البريد المحدد. تنتهي الدعوة بعد ٧ أيام، ولا يقبلها إلا صاحب البريد بعد تأكيد حسابه.</DialogDescription>{!inviteUrl ? <form onSubmit={(event) => { event.preventDefault(); void sendInvite(); }} className="space-y-4"><label className="block text-sm font-bold">البريد الإلكتروني<input required type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="name@example.com" dir="ltr" className={cn(inputClass, "mt-2")} /></label><label className="block text-sm font-bold">الدور<select value={inviteRole} onChange={(event) => setInviteRole(event.target.value as "admin" | "member")} className={cn(inputClass, "mt-2")}><option value="member">عضو — يعمل على المشاريع والمهام</option><option value="admin">مدير مشاريع — ينشئ المشاريع ويديرها</option></select></label><p className="text-xs leading-6 text-muted-foreground">الدعوات محصورة بالمالك؛ لا يفتح أي دور محادثاتك الخاصة أو تكاملاتك.</p><Button type="submit" disabled={!email.trim()}><Link2 className="size-4" /> إنشاء رابط الدعوة</Button></form> : <div className="space-y-4"><p className="text-sm font-semibold">رابط الدعوة جاهز. انسخه وأرسله إلى {email.trim()} فقط.</p><input readOnly value={inviteUrl} dir="ltr" aria-label="رابط الدعوة" onFocus={(event) => event.currentTarget.select()} className={inputClass} /><Button onClick={async () => { try { await navigator.clipboard.writeText(inviteUrl); setCopied(true); } catch { setError("حدد الرابط وانسخه يدوياً."); } }}>{copied ? <Check className="size-4" /> : <ClipboardCopy className="size-4" />}{copied ? "نُسخ الرابط" : "نسخ الرابط"}</Button><p className="text-xs text-muted-foreground">احتفظ بالرابط الآن؛ لا يمكن عرض رابط الدعوة مجدداً بعد إغلاق هذه النافذة.</p></div>}{error && <p role="alert" className="text-sm text-destructive">{error}</p>}</DialogContent></Dialog>
+
+
+  </AppShell>;
+}

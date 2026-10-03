@@ -1,0 +1,1 @@
+DROP POLICY "members view workspace identity" ON public.workspaces;

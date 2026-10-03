@@ -1,0 +1,1 @@
+ALTER TABLE public.employee_policies ADD COLUMN IF NOT EXISTS auto_approve_low_risk boolean NOT NULL DEFAULT false;

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { PersonAvatar } from "@/components/app/PersonAvatar";
 import { Link } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -14,7 +15,7 @@ import type { Tables } from "@/integrations/supabase/types";
 
 type Project = Tables<"collaboration_projects">;
 type WorkItem = Tables<"collaboration_tasks">;
-type Person = { userId: string; name: string; role: string };
+type Person = { userId: string; name: string; role: string; avatar?: string | null };
 type Status = "todo" | "in_progress" | "done";
 type Priority = "urgent" | "high" | "medium" | "low";
 
@@ -121,7 +122,7 @@ export function ProjectBoard({ project, tasks, people, canManage, workspaceId, o
                   {t.ai_employee_id && <EmployeeBadge id={t.ai_employee_id} />}
                   {t.ai_status === "running" && <Loader2 className="size-3.5 animate-spin text-primary" aria-label="الموظف يعمل" />}
                   {t.ai_output && <span className="inline-flex items-center gap-1 text-[0.7rem] font-bold text-jade-deep"><Sparkles className="size-3" /> نتيجة جاهزة</span>}
-                  {human && <span className="ms-auto grid size-6 place-items-center rounded-full bg-secondary text-[0.7rem] font-bold text-primary" title={human.name}>{human.name.slice(0, 1)}</span>}
+                  {human && <PersonAvatar avatar={human.avatar} name={human.name} className="ms-auto size-6" />}
                 </div>
                 <select value={t.status} onChange={(e) => move.mutate({ id: t.id, status: e.target.value as Status })} aria-label={`حالة ${t.title}`} className="mt-2 h-7 w-full rounded border border-border bg-background px-1.5 text-xs lg:hidden">{COLUMNS.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}</select>
               </article>;

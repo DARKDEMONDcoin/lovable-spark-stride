@@ -1,11 +1,12 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Bell, Check, UserCheck, UserX, Users, X } from "lucide-react";
+import { Bell, Check, UserCheck, UserX, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { listMyInbox, markNotificationsRead, respondToInvite } from "@/lib/invite-inbox.functions";
+import { PersonAvatar } from "@/components/app/PersonAvatar";
 import { cn } from "@/lib/utils";
 
 const when = (iso: string) => new Date(iso).toLocaleString("ar", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
@@ -55,7 +56,7 @@ export function NotificationBell() {
               {invites.map((inv) => (
                 <li key={inv.id} className="bg-primary/5 px-4 py-3.5">
                   <div className="flex gap-3">
-                    <span className="grid size-9 shrink-0 place-items-center rounded-full bg-primary/10 text-primary"><Users className="size-4" /></span>
+                    <PersonAvatar avatar={inv.inviterAvatar} name={inv.inviterName} className="size-9" />
                     <div className="min-w-0 flex-1">
                       <p className="text-sm leading-6"><b>{inv.inviterName}</b> دعاك للانضمام إلى <b>«{inv.workspaceName}»</b> {inv.role === "admin" ? "كمدير مشاريع" : "كعضو"}.</p>
                       <p className="mt-0.5 text-xs text-muted-foreground">{when(inv.createdAt)}</p>

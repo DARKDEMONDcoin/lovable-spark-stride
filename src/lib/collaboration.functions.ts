@@ -67,11 +67,14 @@ export const listHumanTeam = createServerFn({ method: "POST" }).middleware([requ
     const { data: members, error } = await supabaseAdmin.from("workspace_members").select("user_id, role, created_at").eq("workspace_id", data.workspaceId);
     if (error) throw new Error(error.message);
     const ids = [workspace.owner_id, ...(members ?? []).map((m) => m.user_id)];
-    const { data: profiles } = await supabaseAdmin.from("profiles").select("id, full_name").in("id", ids);
+    const { data: profiles } = await supabaseAdmin.from("profiles").select("id, full_name, avatar_url").in("id", ids);
     const names = new Map((profiles ?? []).map((p) => [p.id, p.full_name]));
+    const { signAvatars } = await import("./avatar-sign.server");
+    const signed = await signAvatars(supabaseAdmin, (profiles ?? []).map((p) => p.avatar_url));
+    const avatars = new Map((profiles ?? []).map((p) => [p.id, p.avatar_url ? signed.get(p.avatar_url) ?? null : null]));
     return { owner, workspaceName: workspace.name, members: [
-      { userId: workspace.owner_id, role: "owner", name: names.get(workspace.owner_id) || "مالك المساحة" },
-      ...(members ?? []).map((m) => ({ userId: m.user_id, role: m.role, name: names.get(m.user_id) || "عضو الفريق" })),
+      { userId: workspace.owner_id, role: "owner", name: names.get(workspace.owner_id) || "مالك المساحة", avatar: avatars.get(workspace.owner_id) ?? null },
+      ...(members ?? []).map((m) => ({ userId: m.user_id, role: m.role, name: names.get(m.user_id) || "عضو الفريق", avatar: avatars.get(m.user_id) ?? null })),
     ] };
   });
 

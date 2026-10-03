@@ -17,7 +17,7 @@ async function verifiedEmail(userId: string) {
 export const listMyInbox = createServerFn({ method: "GET" }).middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { admin, email } = await verifiedEmail(context.userId);
-    const invites: { id: string; workspaceId: string; workspaceName: string; inviterName: string; role: string; createdAt: string; expiresAt: string }[] = [];
+    const invites: { id: string; workspaceId: string; workspaceName: string; inviterName: string; inviterAvatar: string | null; role: string; createdAt: string; expiresAt: string }[] = [];
     if (email) {
       const { data: rows } = await admin.from("workspace_invitations")
         .select("id, workspace_id, role, invited_by, created_at, expires_at")
@@ -27,9 +27,12 @@ export const listMyInbox = createServerFn({ method: "GET" }).middleware([require
       if (list.length) {
         const [{ data: spaces }, { data: people }, { data: mine }] = await Promise.all([
           admin.from("workspaces").select("id, name, owner_id").in("id", list.map((r) => r.workspace_id)),
-          admin.from("profiles").select("id, full_name").in("id", list.map((r) => r.invited_by)),
+          admin.from("profiles").select("id, full_name, avatar_url").in("id", list.map((r) => r.invited_by)),
           admin.from("workspace_members").select("workspace_id").eq("user_id", context.userId),
         ]);
+        const { signAvatars } = await import("./avatar-sign.server");
+        const signed = await signAvatars(admin, (people ?? []).map((p) => p.avatar_url));
+        const avatars = new Map((people ?? []).map((p) => [p.id, p.avatar_url ? signed.get(p.avatar_url) ?? null : null]));
         const joined = new Set((mine ?? []).map((m) => m.workspace_id));
         const seen = new Set<string>();
         const spaceMap = new Map((spaces ?? []).map((s) => [s.id, s]));
@@ -38,7 +41,7 @@ export const listMyInbox = createServerFn({ method: "GET" }).middleware([require
           const space = spaceMap.get(r.workspace_id);
           if (!space || space.owner_id === context.userId || joined.has(r.workspace_id) || seen.has(r.workspace_id)) continue;
           seen.add(r.workspace_id);
-          invites.push({ id: r.id, workspaceId: r.workspace_id, workspaceName: space.name, inviterName: names.get(r.invited_by) || "مالك المساحة", role: r.role, createdAt: r.created_at, expiresAt: r.expires_at });
+          invites.push({ id: r.id, workspaceId: r.workspace_id, workspaceName: space.name, inviterName: names.get(r.invited_by) || "مالك المساحة", inviterAvatar: avatars.get(r.invited_by) ?? null, role: r.role, createdAt: r.created_at, expiresAt: r.expires_at });
         }
       }
     }

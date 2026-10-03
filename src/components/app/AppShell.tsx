@@ -3,7 +3,7 @@ import { createContext, useContext, useEffect, useLayoutEffect, useState, type R
 import { createPortal } from "react-dom";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Portrait } from "@/components/site/Portrait";
-import { CalendarDays, Globe, Menu, X, User, LogOut, PanelRightClose, PanelRightOpen, ArrowLeft, MessageCircle, LayoutDashboard, FolderKanban, CheckCircle2, BrainCircuit, Blocks, Gift, MessageSquareText, CircleHelp, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { Menu, X, User, LogOut, PanelRightClose, PanelRightOpen, ArrowLeft, MessageCircle, LayoutDashboard, FolderKanban, CheckCircle2, BrainCircuit, Blocks, Gift, MessageSquareText, CircleHelp, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 
 import { team } from "@/data/team";
 import { COUNTRIES } from "@/data/team-portraits";
@@ -324,8 +324,6 @@ const primaryLinks = [
   { to: "/app/approvals", label: "الموافقات", icon: CheckCircle2 },
   { to: "/app/brain", label: "عقل العلامة", icon: BrainCircuit },
   { to: "/app/integrations", label: "التكاملات", icon: Blocks },
-  { to: "/app/browser", label: "المتصفح المنفّذ", icon: Globe },
-  { to: "/app/calendar", label: "التقويم", icon: CalendarDays },
 ] as const;
 const secondaryLinks = [
   { to: "/app/referral", label: "شارك واربح", icon: Gift },

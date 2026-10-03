@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { PersonAvatar } from "@/components/app/PersonAvatar";
 import { Link } from "@tanstack/react-router";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowRight, Bot, CalendarClock, Check, ClipboardCopy, Flag, Loader2, MessageSquare, Plus, Sparkles, StickyNote } from "lucide-react";
+import { Archive, ArrowRight, Bot, CalendarClock, Check, ClipboardCopy, Flag, Loader2, MessageSquare, Plus, Search, Sparkles, StickyNote, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MessageResponse } from "@/components/ai-elements/message";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
@@ -58,9 +58,20 @@ export function ProjectBoard({ project, tasks, people, canManage, workspaceId, o
   const [openId, setOpenId] = useState<string | null>(null);
   const [dragId, setDragId] = useState<string | null>(null);
   const [overCol, setOverCol] = useState<Status | null>(null);
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<"all" | "mine" | "late" | "urgent" | "ai">("all");
+  const me = useQuery({ queryKey: ["me-id"], queryFn: async () => (await supabase.auth.getUser()).data.user?.id ?? null });
   const done = tasks.filter((t) => t.status === "done").length;
   const pct = tasks.length ? Math.round((done / tasks.length) * 100) : 0;
   const open = tasks.find((t) => t.id === openId);
+  const visible = tasks.filter((t) => {
+    if (query.trim() && !`${t.title} ${t.notes ?? ""}`.toLowerCase().includes(query.trim().toLowerCase())) return false;
+    if (filter === "mine") return t.assignee_id === me.data;
+    if (filter === "late") return t.status !== "done" && Boolean(dueLabel(t.due_date)?.late);
+    if (filter === "urgent") return t.priority === "urgent" || t.priority === "high";
+    if (filter === "ai") return Boolean(t.ai_employee_id);
+    return true;
+  });
 
   const create = useMutation({ mutationFn: async () => {
     const { data: auth } = await supabase.auth.getUser();
@@ -73,20 +84,25 @@ export function ProjectBoard({ project, tasks, people, canManage, workspaceId, o
   const move = useMutation({ mutationFn: async ({ id, status }: { id: string; status: Status }) => {
     const { error } = await supabase.from("collaboration_tasks").update({ status }).eq("id", id); if (error) throw error;
   }, onSuccess: onChanged });
-  const projectStatus = useMutation({ mutationFn: async () => {
-    const { error } = await supabase.from("collaboration_projects").update({ status: project.status === "completed" ? "active" : "completed" }).eq("id", project.id); if (error) throw error;
+  const projectStatus = useMutation({ mutationFn: async (status: string) => {
+    const { error } = await supabase.from("collaboration_projects").update({ status }).eq("id", project.id); if (error) throw error;
   }, onSuccess: onChanged });
+  const deleteProject = useMutation({ mutationFn: async () => {
+    const { error } = await supabase.from("collaboration_projects").delete().eq("id", project.id); if (error) throw error;
+  }, onSuccess: () => { onChanged(); onBack(); } });
 
   return <section aria-label={`لوحة ${project.name}`} className="mt-6">
     <div className="flex flex-wrap items-start justify-between gap-4">
       <div className="min-w-0">
         <Button variant="ghost" size="sm" onClick={onBack} className="-ms-2 mb-2 gap-1 text-muted-foreground"><ArrowRight className="size-4" /> كل المشاريع</Button>
-        <h3 className="break-words font-display text-2xl font-black">{project.name}</h3>
+        <h3 className="break-words font-display text-2xl font-black">{project.name}{project.status === "archived" && <span className="ms-2 align-middle text-xs font-bold text-muted-foreground">(مؤرشف)</span>}</h3>
         {project.description && <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{project.description}</p>}
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-2">
         <div className="w-40"><div className="flex justify-between text-xs font-bold"><span>التقدم</span><span>{pct}%</span></div><div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-secondary"><div className="h-full rounded-full bg-primary transition-all" style={{ width: `${pct}%` }} /></div></div>
-        {canManage && <Button variant="outline" size="sm" disabled={projectStatus.isPending} onClick={() => projectStatus.mutate()}>{project.status === "completed" ? "إعادة فتح" : "إنهاء المشروع"}</Button>}
+        {canManage && project.status !== "archived" && <Button variant="outline" size="sm" disabled={projectStatus.isPending} onClick={() => projectStatus.mutate(project.status === "completed" ? "active" : "completed")}>{project.status === "completed" ? "إعادة فتح" : "إنهاء المشروع"}</Button>}
+        {canManage && <Button variant="ghost" size="sm" disabled={projectStatus.isPending} onClick={() => projectStatus.mutate(project.status === "archived" ? "active" : "archived")}><Archive className="size-4" />{project.status === "archived" ? "استعادة" : "أرشفة"}</Button>}
+        {canManage && <Button variant="ghost" size="sm" className="text-destructive" disabled={deleteProject.isPending} onClick={() => { if (window.confirm(`حذف «${project.name}» وكل مهامه نهائياً؟`)) deleteProject.mutate(); }}><Trash2 className="size-4" /> حذف</Button>}
       </div>
     </div>
 
@@ -101,16 +117,21 @@ export function ProjectBoard({ project, tasks, people, canManage, workspaceId, o
       <input type="date" value={due} onChange={(e) => setDue(e.target.value)} aria-label="تاريخ الاستحقاق" className={field} />
       <Button type="submit" size="sm" disabled={create.isPending || title.trim().length < 2}><Plus className="size-4" /> إضافة</Button>
     </form>
-    {(create.error || move.error) && <p role="alert" className="mt-2 text-sm text-destructive">{(create.error ?? move.error)?.message}</p>}
+    {(create.error || move.error || projectStatus.error || deleteProject.error) && <p role="alert" className="mt-2 text-sm text-destructive">{(create.error ?? move.error ?? projectStatus.error ?? deleteProject.error)?.message}</p>}
 
-    <div className="mt-5 grid gap-4 lg:grid-cols-3">
+    <div className="mt-4 flex flex-wrap items-center gap-2">
+      <div className="relative min-w-[12rem] flex-1 sm:max-w-xs"><Search className="pointer-events-none absolute start-2.5 top-2.5 size-4 text-muted-foreground" /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="ابحث في المهام" aria-label="بحث في المهام" className={cn(field, "w-full ps-8")} /></div>
+      {([["all", "الكل"], ["mine", "مهامي"], ["late", "متأخرة"], ["urgent", "أولوية عالية"], ["ai", "مع موظف رقمي"]] as const).map(([id, label]) => <Button key={id} size="sm" variant={filter === id ? "default" : "outline"} onClick={() => setFilter(id)} className="h-8 rounded-full">{label}</Button>)}
+    </div>
+
+    <div className="mt-4 grid gap-4 lg:grid-cols-3">
       {COLUMNS.map((col) => {
-        const items = tasks.filter((t) => t.status === col.id);
+        const items = visible.filter((t) => t.status === col.id);
         return <div key={col.id} onDragOver={(e) => { e.preventDefault(); setOverCol(col.id); }} onDragLeave={() => setOverCol(null)} onDrop={(e) => { e.preventDefault(); setOverCol(null); if (dragId) move.mutate({ id: dragId, status: col.id }); setDragId(null); }}
           className={cn("min-h-48 rounded-md border bg-secondary/40 p-2.5 transition-colors", overCol === col.id ? "border-primary bg-primary/5" : "border-border")} aria-label={col.label}>
           <div className="mb-2.5 flex items-center justify-between px-1"><h4 className="text-sm font-black">{col.label}</h4><span className="rounded-full bg-background px-2 text-xs font-bold text-muted-foreground">{items.length}</span></div>
           <div className="space-y-2">
-            {items.length === 0 && <p className="py-8 text-center text-xs text-muted-foreground">اسحب مهمة إلى هنا</p>}
+            {items.length === 0 && <p className="py-8 text-center text-xs text-muted-foreground">{filter !== "all" || query ? "لا نتائج" : "اسحب مهمة إلى هنا"}</p>}
             {items.map((t) => {
               const due = dueLabel(t.due_date);
               const human = people.find((p) => p.userId === t.assignee_id);
@@ -134,6 +155,29 @@ export function ProjectBoard({ project, tasks, people, canManage, workspaceId, o
 
     {open && <TaskDetail key={open.id} task={open} people={people} onClose={() => setOpenId(null)} onChanged={onChanged} />}
   </section>;
+}
+
+function Comments({ task, people }: { task: WorkItem; people: Person[] }) {
+  const qc = useQueryClient();
+  const [body, setBody] = useState("");
+  const key = ["collab-comments", task.id];
+  const list = useQuery({ queryKey: key, refetchInterval: 20000, queryFn: async () => { const { data, error } = await supabase.from("collaboration_comments").select("*").eq("task_id", task.id).order("created_at"); if (error) throw error; return data; } });
+  const add = useMutation({ mutationFn: async () => {
+    const { data: auth } = await supabase.auth.getUser();
+    if (!auth.user) throw new Error("سجّل الدخول أولاً.");
+    const mentions = people.filter((p) => body.includes(`@${p.name}`)).map((p) => p.userId);
+    const { error } = await supabase.from("collaboration_comments").insert({ task_id: task.id, workspace_id: task.workspace_id, author_id: auth.user.id, body: body.trim(), mentions });
+    if (error) throw error;
+  }, onSuccess: () => { setBody(""); void qc.invalidateQueries({ queryKey: key }); } });
+  return <div className="space-y-3">
+    <h4 className="flex items-center gap-2 text-sm font-black"><MessageSquare className="size-4" /> التعليقات {list.data?.length ? <span className="text-xs text-muted-foreground">{list.data.length}</span> : null}</h4>
+    {list.data?.length ? <ul className="space-y-3">{list.data.map((c) => { const p = people.find((x) => x.userId === c.author_id); return <li key={c.id} className="flex gap-2.5"><PersonAvatar avatar={p?.avatar} name={p?.name ?? "عضو"} className="size-7" /><div className="min-w-0 flex-1 rounded-md bg-secondary/60 px-3 py-2"><p className="text-xs font-bold">{p?.name ?? "عضو"} <span className="font-normal text-muted-foreground">· {new Date(c.created_at).toLocaleString("ar", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}</span></p><p className="mt-1 whitespace-pre-wrap break-words text-sm">{c.body}</p></div></li>; })}</ul> : <p className="text-xs text-muted-foreground">لا تعليقات بعد. اكتب @ ثم اسم زميل لتنبيهه.</p>}
+    <form onSubmit={(e) => { e.preventDefault(); if (body.trim()) add.mutate(); }} className="space-y-2">
+      <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={2} maxLength={4000} placeholder="اكتب تعليقاً…" aria-label="تعليق جديد" className="w-full rounded-md border border-border bg-background p-3 text-sm" />
+      <div className="flex flex-wrap items-center gap-1.5">{people.map((p) => <button key={p.userId} type="button" onClick={() => setBody((b) => `${b}${b && !b.endsWith(" ") ? " " : ""}@${p.name} `)} className="rounded-full border border-border px-2 py-0.5 text-xs hover:border-primary">@{p.name}</button>)}<Button type="submit" size="sm" className="ms-auto" disabled={add.isPending || !body.trim()}>إرسال</Button></div>
+      {add.error && <p role="alert" className="text-xs text-destructive">{add.error.message}</p>}
+    </form>
+  </div>;
 }
 
 function TaskDetail({ task, people, onClose, onChanged }: { task: WorkItem; people: Person[]; onClose: () => void; onChanged: () => void }) {
@@ -179,6 +223,7 @@ function TaskDetail({ task, people, onClose, onChanged }: { task: WorkItem; peop
       <label className="block text-sm font-black"><span className="flex items-center gap-2"><StickyNote className="size-4" /> ملاحظات الفريق</span>
         <textarea value={notes} onChange={(e) => setNotes(e.target.value)} onBlur={() => { if (notes !== (task.notes ?? "")) update.mutate({ notes }); }} rows={3} maxLength={4000} placeholder="سياق، روابط، أو ملاحظات للمراجعة — يستخدمها الموظف الرقمي عند التنفيذ." className="mt-2 w-full rounded-md border border-border bg-background p-3 text-sm font-normal" />
       </label>
+      <Comments task={task} people={people} />
       {err && <p role="alert" className="text-sm text-destructive">{err.message}</p>}
       <div className="flex justify-end"><Button variant="ghost" size="sm" className="text-destructive" disabled={remove.isPending} onClick={() => { if (window.confirm("حذف هذه المهمة؟")) remove.mutate(); }}>حذف المهمة</Button></div>
     </DialogContent>

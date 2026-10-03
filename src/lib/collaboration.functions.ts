@@ -165,3 +165,39 @@ export const updateSpaceIdentity = createServerFn({ method: "POST" }).middleware
     if (error) throw new Error("تعذّر حفظ التعديل.");
     return { ok: true };
   });
+
+/** أرشفة/استرجاع مشروع كامل — للمالك فقط. */
+export const setProjectArchived = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ workspaceId: z.string().uuid(), archived: z.boolean() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { data: rows, error } = await context.supabase.from("workspaces")
+      .update({ archived_at: data.archived ? new Date().toISOString() : null } as never)
+      .eq("id", data.workspaceId).eq("owner_id", context.userId).eq("kind", "project").select("id");
+    if (error || !rows?.length) throw new Error("تعذّر تحديث حالة المشروع.");
+    return { ok: true };
+  });
+
+/** أعضاء المشروع المؤهلون لاستلام الملكية. */
+export const listProjectMembers = createServerFn({ method: "GET" }).middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ workspaceId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { data: members, error } = await context.supabase.from("workspace_members").select("user_id, role").eq("workspace_id", data.workspaceId);
+    if (error) throw new Error("تعذّر تحميل الأعضاء.");
+    const ids = (members ?? []).map((m) => m.user_id).filter((id) => id !== context.userId);
+    if (!ids.length) return [];
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: profiles } = await supabaseAdmin.from("profiles").select("id, full_name").in("id", ids);
+    return ids.map((id) => ({ id, name: profiles?.find((p) => p.id === id)?.full_name || "عضو" }));
+  });
+
+/** نقل ملكية مشروع لعضو حالي؛ المالك القديم يبقى مسؤولاً في الفريق. */
+export const transferProjectOwnership = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ workspaceId: z.string().uuid(), newOwnerId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { data: ws } = await context.supabase.from("workspaces").select("id").eq("id", data.workspaceId).eq("owner_id", context.userId).eq("kind", "project").maybeSingle();
+    if (!ws) throw new Error("أنت مش مالك المشروع ده.");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.rpc("transfer_project_ownership" as never, { _workspace_id: data.workspaceId, _caller: context.userId, _new_owner: data.newOwnerId } as never);
+    if (error) throw new Error("تعذّر نقل الملكية — لازم يكون الشخص عضو في المشروع.");
+    return { ok: true };
+  });

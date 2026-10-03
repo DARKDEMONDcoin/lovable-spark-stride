@@ -2588,7 +2588,7 @@ export type Database = {
       }
       owns_workspace: { Args: { _workspace_id: string }; Returns: boolean }
       transfer_project_ownership: {
-        Args: { _new_owner: string; _workspace_id: string }
+        Args: { _caller: string; _new_owner: string; _workspace_id: string }
         Returns: undefined
       }
       verify_cron_token: {

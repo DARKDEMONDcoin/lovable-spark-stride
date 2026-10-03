@@ -2,11 +2,12 @@ import { useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { Check, ChevronsUpDown, ImagePlus, Loader2, Pencil, Plus, User, Users, X } from "lucide-react";
+import { Archive, ArchiveRestore, Check, ChevronsUpDown, Crown, ImagePlus, Loader2, Pencil, Plus, User, Users, X } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
-import { createProjectSpace, updateSpaceIdentity } from "@/lib/collaboration.functions";
+import { createProjectSpace, listProjectMembers, setProjectArchived, transferProjectOwnership, updateSpaceIdentity } from "@/lib/collaboration.functions";
 import { setChatSpace, useChatSpaces, useChatWorkspace } from "@/lib/data";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -14,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
-type Space = { id: string; name: string; kind: string; owned: boolean; logo: string | null };
+type Space = { id: string; name: string; kind: string; owned: boolean; logo: string | null; archived?: boolean };
 
 function SpaceIcon({ space, className }: { space?: Pick<Space, "name" | "logo" | "kind"> | null | undefined; className?: string }) {
   if (space?.logo) return <img src={space.logo} alt="" className={cn("size-9 shrink-0 rounded-lg border border-border object-cover", className)} />;
@@ -34,8 +35,11 @@ export function SpaceSwitcher({ collapsed = false }: { collapsed?: boolean }) {
   const [open, setOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState(false);
-  const list = (spaces ?? []) as Space[];
-  const current = list.find((s) => s.id === active?.id) ?? list[0];
+  const all = (spaces ?? []) as Space[];
+  const current = all.find((s) => s.id === active?.id) ?? all[0];
+  const list = all.filter((s) => !s.archived);
+  const archivedList = all.filter((s) => s.archived);
+  const [showArchived, setShowArchived] = useState(false);
 
   const switchTo = (id: string) => {
     setChatSpace(id);
@@ -79,9 +83,24 @@ export function SpaceSwitcher({ collapsed = false }: { collapsed?: boolean }) {
               </button>
             ))}
           </div>
+          {archivedList.length > 0 && (
+            <div className="mt-1 border-t border-border pt-1">
+              <button type="button" onClick={() => setShowArchived((v) => !v)} className="flex w-full items-center gap-1.5 px-2 py-1 text-[0.7rem] font-bold text-muted-foreground hover:text-foreground">
+                <Archive className="size-3" /> المشاريع المؤرشفة ({archivedList.length})
+              </button>
+              {showArchived && archivedList.map((s) => (
+                <button key={s.id} type="button" onClick={() => switchTo(s.id)}
+                  className={cn("flex w-full items-center gap-2.5 rounded-md p-2 text-start text-sm opacity-70 hover:bg-accent hover:opacity-100", s.id === current?.id && "bg-accent")}>
+                  <SpaceIcon space={s} className="size-8 grayscale" />
+                  <span className="min-w-0 flex-1 truncate font-bold">{s.name}</span>
+                  <span className="text-[0.65rem] text-muted-foreground">مؤرشف</span>
+                </button>
+              ))}
+            </div>
+          )}
           {current?.kind === "project" && current.owned && (
             <Button type="button" variant="ghost" className="mt-2 w-full gap-2" onClick={() => { setOpen(false); setEditing(true); }}>
-              <Pencil className="size-4" /> تعديل اسم وصورة المشروع
+              <Pencil className="size-4" /> إعدادات المشروع
             </Button>
           )}
           <Button type="button" variant="outline" className="mt-2 w-full gap-2" onClick={() => { setOpen(false); setCreating(true); }}>
@@ -103,6 +122,28 @@ function EditProjectDialog({ space, onClose }: { space: Space; onClose: () => vo
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const preview = file ? URL.createObjectURL(file) : space.logo;
+  const archive = useServerFn(setProjectArchived);
+  const transfer = useServerFn(transferProjectOwnership);
+  const fetchMembers = useServerFn(listProjectMembers);
+  const { data: members } = useQuery({ queryKey: ["project-members", space.id], queryFn: () => fetchMembers({ data: { workspaceId: space.id } }) });
+  const [newOwner, setNewOwner] = useState("");
+
+  const run = async (fn: () => Promise<unknown>, ok: string) => {
+    setBusy(true);
+    try { await fn(); await qc.invalidateQueries(); toast.success(ok); onClose(); }
+    catch (e) { toast.error(e instanceof Error ? e.message : "حصل خطأ"); }
+    finally { setBusy(false); }
+  };
+  const toggleArchive = () => {
+    if (!space.archived && !window.confirm("أرشفة المشروع؟ هيختفي من قايمة المشاريع عندك وعند الفريق، وتقدر ترجّعه في أي وقت.")) return;
+    void run(() => archive({ data: { workspaceId: space.id, archived: !space.archived } }), space.archived ? "رجّعت المشروع" : "اتأرشف المشروع");
+  };
+  const doTransfer = () => {
+    const m = members?.find((x) => x.id === newOwner);
+    if (!m) return;
+    if (!window.confirm(`نقل ملكية المشروع لـ«${m.name}»؟ هتفضل عضو مسؤول في الفريق، لكن هو اللي هيتحكم في المشروع.`)) return;
+    void run(() => transfer({ data: { workspaceId: space.id, newOwnerId: m.id } }), `بقى ${m.name} مالك المشروع`);
+  };
 
   const save = async () => {
     if (name.trim().length < 2) { toast.error("اكتب اسم المشروع"); return; }
@@ -131,7 +172,7 @@ function EditProjectDialog({ space, onClose }: { space: Space; onClose: () => vo
   return (
     <Dialog open onOpenChange={(v) => { if (!v) onClose(); }}>
       <DialogContent className="max-w-md" dir="rtl">
-        <DialogTitle className="font-display text-xl font-black">تعديل المشروع</DialogTitle>
+        <DialogTitle className="font-display text-xl font-black">إعدادات المشروع</DialogTitle>
         <div className="flex items-center gap-3">
           <button type="button" onClick={() => fileRef.current?.click()} aria-label="تغيير صورة المشروع"
             className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-xl border-2 border-dashed border-border bg-muted hover:border-primary">
@@ -145,6 +186,22 @@ function EditProjectDialog({ space, onClose }: { space: Space; onClose: () => vo
         </div>
         <Button type="button" onClick={save} disabled={busy} className="w-full gap-2">
           {busy && <Loader2 className="size-4 animate-spin" />} حفظ
+        </Button>
+        <div className="space-y-2 border-t border-border pt-4">
+          <p className="flex items-center gap-1.5 text-sm font-bold"><Crown className="size-4 text-primary" /> نقل ملكية المشروع</p>
+          {members && members.length > 0 ? (
+            <div className="flex gap-2">
+              <select value={newOwner} onChange={(e) => setNewOwner(e.target.value)} aria-label="اختار المالك الجديد"
+                className="h-9 flex-1 rounded-md border border-input bg-background px-2 text-sm">
+                <option value="">اختار عضو من الفريق</option>
+                {members.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+              </select>
+              <Button type="button" variant="outline" disabled={!newOwner || busy} onClick={doTransfer}>نقل</Button>
+            </div>
+          ) : <p className="text-xs text-muted-foreground">ادعُ عضو للمشروع الأول علشان تقدر تنقل له الملكية.</p>}
+        </div>
+        <Button type="button" variant="ghost" disabled={busy} onClick={toggleArchive} className="w-full gap-2 text-muted-foreground">
+          {space.archived ? <><ArchiveRestore className="size-4" /> استرجاع المشروع</> : <><Archive className="size-4" /> أرشفة المشروع</>}
         </Button>
       </DialogContent>
     </Dialog>

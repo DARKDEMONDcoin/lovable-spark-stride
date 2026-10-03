@@ -2766,6 +2766,7 @@ export type Database = {
         Args: { _token_hash: string }
         Returns: string
       }
+      approve_mature_referral_commissions: { Args: never; Returns: number }
       bump_rate_limit: {
         Args: { _bucket: string; _identifier: string; _window_seconds: number }
         Returns: number
@@ -2803,6 +2804,10 @@ export type Database = {
       referral_rate_for_active_count: {
         Args: { _active_count: number }
         Returns: number
+      }
+      request_referral_payout: {
+        Args: { _destination: string; _method: string; _user_id: string }
+        Returns: string
       }
       reverse_referral_payment: {
         Args: { _payment_reference: string; _reason: string }

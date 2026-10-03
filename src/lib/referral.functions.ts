@@ -138,19 +138,16 @@ export const requestReferralPayout = createServerFn({ method: "POST" })
   }).parse(input))
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: approved, error } = await supabaseAdmin.from("referral_commissions").select("commission_amount_cents").eq("referrer_user_id", context.userId).eq("currency", "USD").eq("status", "approved");
-    if (error) throw new Error(error.message);
-    const available = (approved ?? []).reduce((sum, row) => sum + Number(row.commission_amount_cents), 0);
-    if (available < 5000) throw new Error("الحد الأدنى لطلب السحب هو ٥٠ دولاراً من الرصيد المتاح.");
-
-    const { data: pending } = await supabaseAdmin.from("referral_payout_requests").select("id").eq("user_id", context.userId).in("status", ["requested", "reviewing"]).limit(1).maybeSingle();
-    if (pending) throw new Error("لديك طلب سحب قيد المراجعة بالفعل.");
-    const { data: created, error: createError } = await supabaseAdmin.from("referral_payout_requests").insert({ user_id: context.userId, amount_cents: available, currency: "USD", method: data.method, destination: data.destination }).select("id").single();
-    if (createError || !created) throw new Error(createError?.message ?? "تعذّر إرسال طلب السحب.");
-
-    await Promise.all([
-      supabaseAdmin.from("referral_accounts").update({ payout_method: data.method, payout_destination: data.destination, updated_at: new Date().toISOString() }).eq("user_id", context.userId),
-      supabaseAdmin.from("referral_commissions").update({ status: "reserved" }).eq("referrer_user_id", context.userId).eq("currency", "USD").eq("status", "approved"),
-    ]);
-    return { ok: true as const, requestId: created.id };
+    const { data: requestId, error } = await supabaseAdmin.rpc("request_referral_payout", {
+      _user_id: context.userId,
+      _method: data.method,
+      _destination: data.destination,
+    });
+    if (error || !requestId) {
+      const message = error?.message ?? "تعذّر إرسال طلب السحب.";
+      if (message.includes("Minimum payout")) throw new Error("الحد الأدنى لطلب السحب هو ٥٠ دولاراً من الرصيد المتاح.");
+      if (message.includes("already pending")) throw new Error("لديك طلب سحب قيد المراجعة بالفعل.");
+      throw new Error(message);
+    }
+    return { ok: true as const, requestId };
   });

@@ -8,10 +8,9 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
-- Platform keys use server-only `app_secrets` then runtime secrets; user credentials remain encrypted.
+- Platform keys stay server-only; user credentials remain encrypted.
 - Social outputs use `src/lib/post-format.ts` across site, queue, and Telegram.
 - Cloud browsing uses `src/lib/cloud-browser.server.ts`; sensitive intents require owner approval.
-- Supabase Function Secrets and runtime secrets are isolated write-only stores.
 - Multi-step browsing lives in `src/lib/browser-agent.server.ts`; page content is untrusted and sensitive clicks stop for approval.
 - Global destinations live in the AppShell primary navigation rail beside the unchanged employee inbox; employee-specific tools remain in chat, not a duplicate header menu. Why: separate platform navigation from employee conversations.
 - The desktop AppShell sidebar collapses to an employee icon rail and persists its state locally; keep fixed chat overlays aligned to its width so the conversation stays usable.
@@ -39,3 +38,4 @@
 - Team spaces share employee chats: stream route verifies membership, runs turn via admin client; messages store sender. Why: shared human+AI threads.
 - Invitees accept/decline in the AppShell NotificationBell (`invite-inbox.functions.ts`); inviters get a `user_notifications` row. Why: no reliance on copied links.
 - Project spaces get a team block (members + sender) in employee turns; stream passes verified client+sender. Why: chats address the team.
+- Referral earnings come only from verified payments, wait through the refund window, and are never user-writable. Why: earnings must be trustworthy.

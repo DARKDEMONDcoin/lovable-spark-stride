@@ -15,6 +15,7 @@ import { useEmployeeInbox, useProfile, useUpdateWorkspace, useWorkspace } from "
 import { inboxTime } from "@/lib/inbox-time";
 import { UserAvatar } from "@/components/app/UserAvatar";
 import { useAvatarUrl } from "@/hooks/use-avatar";
+import { NotificationBell } from "@/components/app/NotificationBell";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import defaultUserRobot from "@/assets/default-user-robot.jpg";
 import { SiteFavicon } from "@/components/app/SiteBadge";
@@ -479,6 +480,7 @@ function AppShellFrame({ title, lead, actions, children, padded, compactTitle, h
               )}
             >
               {actions}
+              <NotificationBell />
               <UserMenu name={profile?.full_name ?? null} />
             </div>
           </div>

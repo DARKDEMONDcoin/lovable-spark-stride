@@ -59,7 +59,6 @@ import { askEmployee, runSkill } from "@/lib/ai.functions";
 import { reviseEmployeeAction } from "@/lib/employee-actions.functions";
 import { parseChatCommand } from "@/lib/chat-commands";
 import { saveChatSignal } from "@/lib/learning.functions";
-import { SkillPalette } from "@/components/app/SkillPalette";
 import { Thinking, LiveStatus } from "@/components/app/Thinking";
 import { VoiceInput } from "@/components/app/VoiceInput";
 import { Markdown } from "@/components/app/Markdown";
@@ -677,9 +676,6 @@ const EMPLOYEE_COPY: Record<string, { prompts: string[]; greetings: string[] }> 
 };
 
 /** أزرار الشريط العلوي المناسبة لكل موظف. */
-const BAR_BRAND = new Set(["sonny", "eva", "sam", "nour", "dana", "adam"]);
-const BAR_WORK = new Set(["sonny", "eva", "sam", "nour", "adam", "dana"]);
-
 function useTypewriter(lines: string[], pause = 1700, enabled = true) {
   const [line, setLine] = useState(0);
   const [length, setLength] = useState(0);
@@ -848,7 +844,6 @@ function ChatView({
       data: { workspaceId: workspace.id, employeeId: id, messageId, kind, originalText },
     }).catch(() => undefined);
   };
-  const employeeSkills = skillsFor(id);
   const quickSkills = featuredSkillsFor(id).slice(0, 6);
   const employeeCopy: { prompts: string[]; greetings: string[] } =
     EMPLOYEE_COPY[id] ?? EMPLOYEE_COPY["sonny"]!;
@@ -1662,7 +1657,7 @@ function ChatView({
               <div className="flex justify-start gap-3 animate-bubble-in">
                 <span className="relative mt-1 block size-9 shrink-0 overflow-hidden rounded-full border border-border shadow-sm">
                   {(workspace as { shared?: boolean } | null)?.shared ? (
-                    <PersonAvatar avatar={profile?.avatar_url} name={profile?.full_name ?? "أنت"} className="size-full rounded-full" />
+                    <UserAvatar />
                   ) : (
                     <UserAvatar />
                   )}
@@ -1798,7 +1793,7 @@ function ChatView({
                   </button>
                 </header>
                 <iframe
-                  src={`${embeddedTool.tool.to}?embedded=1`}
+                  src={`${embeddedTool.tool.to}?embedded=1&employee=${encodeURIComponent(member.id)}`}
                   title={embeddedTool.tool.title}
                 />
               </section>
@@ -2024,7 +2019,7 @@ function ChatView({
                 <span>داخل الرسائل</span>
               </button>
             </header>
-            <iframe src={`${embeddedTool.tool.to}?embedded=1`} title={embeddedTool.tool.title} />
+            <iframe src={`${embeddedTool.tool.to}?embedded=1&employee=${encodeURIComponent(member.id)}`} title={embeddedTool.tool.title} />
           </section>
         ) : null}
 

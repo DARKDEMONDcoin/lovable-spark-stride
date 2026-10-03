@@ -11,8 +11,10 @@ import { compareSitesTask, runBrowserTask } from "@/lib/employee-actions.functio
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/app/browser")({
-  validateSearch: (search: Record<string, unknown>): { employee?: string } =>
-    typeof search["employee"] === "string" ? { employee: search["employee"].slice(0, 20) } : {},
+  validateSearch: (search: Record<string, unknown>): { employee?: string; embedded?: string } => ({
+    ...(typeof search["employee"] === "string" ? { employee: search["employee"].slice(0, 20) } : {}),
+    ...(typeof search["embedded"] === "string" ? { embedded: search["embedded"].slice(0, 5) } : {}),
+  }),
   head: () => ({
     meta: [
       { title: "المتصفح المنفّذ | سهل" },
@@ -61,6 +63,7 @@ function BrowserPage() {
       runTask({
         data: {
           workspaceId: workspace!.id,
+          employeeId: employee,
           goal: goal.trim(),
           startUrl: startUrl.trim() || undefined,
           resumeSessionId,
@@ -70,7 +73,7 @@ function BrowserPage() {
   const compare = useMutation({
     mutationFn: () =>
       runCompare({
-        data: { workspaceId: workspace!.id, goal: goal.trim(), urls: urls.map((u) => u.trim()).filter(Boolean) },
+        data: { workspaceId: workspace!.id, employeeId: employee, goal: goal.trim(), urls: urls.map((u) => u.trim()).filter(Boolean) },
       }),
   });
 

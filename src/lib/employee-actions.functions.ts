@@ -99,6 +99,7 @@ export const runBrowserTask = createServerFn({ method: "POST" })
     z
       .object({
         workspaceId: z.string().uuid(),
+        employeeId: z.string().min(2).max(20).optional(),
         goal: z.string().trim().min(5).max(1500),
         startUrl: z.string().url().max(2000).optional(),
         resumeSessionId: z.string().max(100).optional(),
@@ -109,13 +110,14 @@ export const runBrowserTask = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const admin = await assertOwner(context.supabase, data.workspaceId);
     const { enforceEmployeePolicy, recordAudit } = await import("./employee-policy.server");
-    await enforceEmployeePolicy(admin, data.workspaceId, "eva", "eva-browser-task");
+    const employeeId = data.employeeId ?? "eva";
+    await enforceEmployeePolicy(admin, data.workspaceId, employeeId, `${employeeId}-browser-task`);
     const { runBrowserAgent } = await import("./browser-agent.server");
     const r = await runBrowserAgent(data);
     await recordAudit(admin, {
       workspaceId: data.workspaceId,
-      employeeId: "eva",
-      actionId: "eva-browser-task",
+      employeeId,
+      actionId: `${employeeId}-browser-task`,
       provider: "browser",
       status: r.status === "done" ? "done" : r.status === "error" ? "failed" : "blocked",
       values: { title: data.goal.slice(0, 120), url: data.startUrl ?? "" },
@@ -130,6 +132,7 @@ export const compareSitesTask = createServerFn({ method: "POST" })
     z
       .object({
         workspaceId: z.string().uuid(),
+        employeeId: z.string().min(2).max(20).optional(),
         goal: z.string().trim().min(5).max(1000),
         urls: z.array(z.string().url().max(2000)).min(2).max(5),
       })

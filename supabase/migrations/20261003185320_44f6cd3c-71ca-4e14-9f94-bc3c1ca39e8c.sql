@@ -1,0 +1,10 @@
+DROP POLICY "members read collab files" ON storage.objects;
+DROP POLICY "members upload collab files" ON storage.objects;
+CREATE POLICY "members read collab files" ON storage.objects FOR SELECT TO authenticated USING (bucket_id = 'collab-files' AND (private.is_workspace_member(((storage.foldername(name))[1])::uuid, auth.uid()) OR public.owns_workspace(((storage.foldername(name))[1])::uuid)));
+CREATE POLICY "members upload collab files" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'collab-files' AND (private.is_workspace_member(((storage.foldername(name))[1])::uuid, auth.uid()) OR public.owns_workspace(((storage.foldername(name))[1])::uuid)));
+DROP POLICY "members read attachments" ON public.collaboration_attachments;
+DROP POLICY "members add attachments" ON public.collaboration_attachments;
+DROP POLICY "uploader deletes attachments" ON public.collaboration_attachments;
+CREATE POLICY "members read attachments" ON public.collaboration_attachments FOR SELECT TO authenticated USING (private.is_workspace_member(workspace_id, auth.uid()) OR public.owns_workspace(workspace_id));
+CREATE POLICY "members add attachments" ON public.collaboration_attachments FOR INSERT TO authenticated WITH CHECK (uploaded_by = auth.uid() AND (private.is_workspace_member(workspace_id, auth.uid()) OR public.owns_workspace(workspace_id)));
+CREATE POLICY "uploader deletes attachments" ON public.collaboration_attachments FOR DELETE TO authenticated USING (uploaded_by = auth.uid());

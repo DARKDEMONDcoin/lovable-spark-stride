@@ -25,15 +25,19 @@ export const listMyInbox = createServerFn({ method: "GET" }).middleware([require
         .gt("expires_at", new Date().toISOString()).order("created_at", { ascending: false }).limit(20);
       const list = rows ?? [];
       if (list.length) {
-        const [{ data: spaces }, { data: people }] = await Promise.all([
+        const [{ data: spaces }, { data: people }, { data: mine }] = await Promise.all([
           admin.from("workspaces").select("id, name, owner_id").in("id", list.map((r) => r.workspace_id)),
           admin.from("profiles").select("id, full_name").in("id", list.map((r) => r.invited_by)),
+          admin.from("workspace_members").select("workspace_id").eq("user_id", context.userId),
         ]);
+        const joined = new Set((mine ?? []).map((m) => m.workspace_id));
+        const seen = new Set<string>();
         const spaceMap = new Map((spaces ?? []).map((s) => [s.id, s]));
         const names = new Map((people ?? []).map((p) => [p.id, p.full_name]));
         for (const r of list) {
           const space = spaceMap.get(r.workspace_id);
-          if (!space || space.owner_id === context.userId) continue;
+          if (!space || space.owner_id === context.userId || joined.has(r.workspace_id) || seen.has(r.workspace_id)) continue;
+          seen.add(r.workspace_id);
           invites.push({ id: r.id, workspaceId: r.workspace_id, workspaceName: space.name, inviterName: names.get(r.invited_by) || "مالك المساحة", role: r.role, createdAt: r.created_at, expiresAt: r.expires_at });
         }
       }

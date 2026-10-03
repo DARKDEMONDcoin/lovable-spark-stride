@@ -2504,6 +2504,8 @@ export type Database = {
           id: string
           industry: string
           initials: string
+          kind: string
+          logo_url: string | null
           name: string
           owner_id: string
           profile: Json
@@ -2519,6 +2521,8 @@ export type Database = {
           id?: string
           industry?: string
           initials?: string
+          kind?: string
+          logo_url?: string | null
           name: string
           owner_id: string
           profile?: Json
@@ -2534,6 +2538,8 @@ export type Database = {
           id?: string
           industry?: string
           initials?: string
+          kind?: string
+          logo_url?: string | null
           name?: string
           owner_id?: string
           profile?: Json

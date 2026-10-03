@@ -1,0 +1,1 @@
+ALTER TABLE public.workspaces ADD COLUMN IF NOT EXISTS logo_url text, ADD COLUMN IF NOT EXISTS kind text NOT NULL DEFAULT 'personal';

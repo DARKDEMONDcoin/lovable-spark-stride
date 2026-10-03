@@ -19,7 +19,7 @@ export function ChatSpaceSwitcher() {
         id="chat-space"
         aria-label="مساحة المحادثة"
         value={active?.id ?? ""}
-        onChange={(e) => setChatSpace(e.target.value === own?.id ? null : e.target.value)}
+        onChange={(e) => setChatSpace(e.target.value)}
         className="min-w-0 flex-1 rounded-lg border border-border bg-background px-2 py-1"
       >
         {spaces.map((s) => (

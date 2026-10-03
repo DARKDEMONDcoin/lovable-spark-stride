@@ -91,11 +91,11 @@ export const listHumanTeam = createServerFn({ method: "POST" }).middleware([requ
     ] };
   });
 
-type SpaceRow = { id: string; name: string; logo_url: string | null; kind: string; owner_id: string; created_at: string };
+type SpaceRow = { id: string; name: string; logo_url: string | null; kind: string; owner_id: string; created_at: string; archived_at?: string | null };
 
 export const listMyHumanSpaces = createServerFn({ method: "GET" }).middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const cols = "id, name, logo_url, kind, owner_id, created_at";
+    const cols = "id, name, logo_url, kind, owner_id, created_at, archived_at";
     const { data: owned, error: ownError } = await context.supabase.from("workspaces").select(cols).eq("owner_id", context.userId).order("created_at", { ascending: true });
     const { data: joined, error: joinError } = await context.supabase.from("workspace_members").select("workspace_id").eq("user_id", context.userId);
     if (ownError || joinError) throw new Error("تعذّر تحميل مساحات الفريق.");
@@ -112,6 +112,7 @@ export const listMyHumanSpaces = createServerFn({ method: "GET" }).middleware([r
       kind: i === 0 && s.owner_id === context.userId ? "personal" : s.kind === "project" ? "project" : s.owner_id === context.userId ? "personal" : "project",
       owned: s.owner_id === context.userId,
       logo: s.logo_url ? signed.get(s.logo_url) ?? null : null,
+      archived: !!s.archived_at,
     }));
   });
 

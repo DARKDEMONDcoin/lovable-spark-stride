@@ -11,9 +11,13 @@ export const inviteHuman = createServerFn({ method: "POST" }).middleware([requir
   .handler(async ({ data, context }) => {
     const { data: workspace } = await context.supabase.from("workspaces").select("id").eq("id", data.workspaceId).eq("owner_id", context.userId).maybeSingle();
     if (!workspace) throw new Error("المالك وحده يستطيع دعوة أعضاء جدد.");
+    const email = data.email.trim().toLowerCase();
+    if (email === String(context.claims?.["email"] ?? "").toLowerCase()) throw new Error("لا يمكنك دعوة نفسك.");
+    // دعوة واحدة فعّالة لكل بريد: تُلغى السابقة غير المقبولة حتى لا تتكرر الإشعارات.
+    await context.supabase.from("workspace_invitations").update({ revoked_at: new Date().toISOString() }).eq("workspace_id", data.workspaceId).eq("email", email).is("accepted_at", null).is("revoked_at", null);
     const token = randomBytes(32).toString("hex");
     const tokenHash = createHash("sha256").update(token).digest("hex");
-    const { error } = await context.supabase.from("workspace_invitations").insert({ workspace_id: data.workspaceId, email: data.email.trim().toLowerCase(), role: data.role, token_hash: tokenHash, invited_by: context.userId });
+    const { error } = await context.supabase.from("workspace_invitations").insert({ workspace_id: data.workspaceId, email, role: data.role, token_hash: tokenHash, invited_by: context.userId });
     if (error) throw new Error(error.message);
     return { token };
   });

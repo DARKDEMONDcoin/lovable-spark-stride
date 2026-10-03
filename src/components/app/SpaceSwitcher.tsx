@@ -14,11 +14,15 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { useRegion } from "@/hooks/use-region";
+import { spaceCoverOf } from "@/data/space-covers";
 
 type Space = { id: string; name: string; kind: string; owned: boolean; logo: string | null; archived?: boolean };
 
 function SpaceIcon({ space, className }: { space?: Pick<Space, "name" | "logo" | "kind"> | null | undefined; className?: string }) {
-  if (space?.logo) return <img src={space.logo} alt="" className={cn("size-9 shrink-0 rounded-lg border border-border object-cover", className)} />;
+  const { region } = useRegion();
+  const src = space?.logo ?? (space?.kind === "project" ? spaceCoverOf(region) : null);
+  if (src) return <img src={src} alt="" loading="lazy" className={cn("size-9 shrink-0 rounded-lg border border-border object-cover", className)} />;
   return (
     <span className={cn("grid size-9 shrink-0 place-items-center rounded-lg border border-border bg-primary/10 font-display text-sm font-black text-primary", className)}>
       {space?.kind === "personal" ? <User className="size-4" /> : (space?.name ?? "؟").slice(0, 2)}

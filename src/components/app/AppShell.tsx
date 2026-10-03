@@ -16,6 +16,7 @@ import { inboxTime } from "@/lib/inbox-time";
 import { UserAvatar } from "@/components/app/UserAvatar";
 import { useAvatarUrl } from "@/hooks/use-avatar";
 import { NotificationBell } from "@/components/app/NotificationBell";
+import { SpaceSwitcher } from "@/components/app/SpaceSwitcher";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import defaultUserRobot from "@/assets/default-user-robot.jpg";
 import { SiteFavicon } from "@/components/app/SiteBadge";
@@ -97,7 +98,8 @@ function SidebarBody({ onNavigate, collapsed = false, onToggle }: { onNavigate?:
         </Button>}
       </div>
 
-      {collapsed ? <span aria-label="موقع النشاط" title="موقع النشاط" className="grid size-11 shrink-0 place-items-center overflow-hidden rounded-md border border-border bg-background"><WorkspaceCardIcon /></span> : <WorkspaceCard />}
+      <SpaceSwitcher collapsed={collapsed} />
+      {collapsed ? null : <WorkspaceCard />}
 
       <div className={cn("flex min-h-0 flex-1 flex-col", collapsed && "w-full")}>
         <div className={cn("mb-2 px-2", collapsed && "sr-only")}>

@@ -37,3 +37,4 @@
 - Chat voice dictation records in the browser and streams transcription through the authenticated `/api/transcribe` route into the draft (never auto-sends). Why: users review spoken text before it reaches an employee.
 - Team workspace = real human members (invite-bound) sharing projects/tasks; tasks may also be assigned to one digital employee run via `collab-ai.functions.ts`, and activity is written only by DB triggers. Why: shared human+AI board without exposing owner-private data.
 - Team spaces share employee chats: stream route verifies membership, runs turn via admin client; messages store sender. Why: shared human+AI threads.
+- Workspace invitations notify in-app: invitees accept/decline from the AppShell NotificationBell via `invite-inbox.functions.ts`, and inviters get a `user_notifications` row. Why: invitations work like modern SaaS without relying on copied links.

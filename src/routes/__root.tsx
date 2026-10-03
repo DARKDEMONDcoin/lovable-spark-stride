@@ -18,6 +18,7 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { RegionProvider } from "@/hooks/use-region";
 import { Button } from "@/components/ui/button";
 import { CookieConsent } from "@/components/site/CookieConsent";
+import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
   return (
@@ -145,6 +146,7 @@ function RootComponent() {
         {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
         <Outlet />
         <CookieConsent />
+        <Toaster position="top-center" dir="rtl" />
       </RegionProvider>
     </QueryClientProvider>
   );
